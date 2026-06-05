@@ -50,7 +50,7 @@ export const TEAMS = [
 ]
 
 // The 12 prediction slots: top 8 and bottom 4
-export const PREDICTION_SLOTS = [1, 2, 3, 4, 5, 6, 7, 8, 44, 45, 46, 47]
+export const PREDICTION_SLOTS = [1, 2, 3, 4, 5, 6, 7, 8, 45, 46, 47, 48]
 
 export const STAGE_RANK: Record<string, number> = {
   'Group Stage': 0,
