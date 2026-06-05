@@ -54,7 +54,7 @@ function StandingsPage() {
             </tr></thead>
             <tbody>
               {ranked.map((t, i) => {
-                const isPred = i < 8 || i >= 43
+                const isPred = i < 8 || i >= 44
                 const gd = t.goals_for - t.goals_against
                 return (
                   <tr key={t.team_name}>
