@@ -199,10 +199,15 @@ function PredictPage({ onNavigate }) {
   return (
     <>
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
-        <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>Pick a unique team for each position. {filled}/12 filled.</p>
-        <p>I need stats and stuff <a href="https://theanalyst.com/competition/fifa-world-cup/predictions">to help with my picks</a></p>
-        <p>I am an animal and <a href="https://www.theguardian.com/sport/2022/dec/12/paul-the-octopus-taiyo-the-otter-world-cup-psychic-animals">will pick randomly</a></p>
+
+      <h2 style={{ fontSize: 18, fontWeight: 500 }}>Prepare to Predict</h2>
+      <div style={{ display: 'flex', gap: 20, marginBottom: 20, flexWrap: 'wrap' }}>
+        <a href="https://theanalyst.com/competition/fifa-world-cup/predictions">Stats and Simulations →</a>
+        <a href="https://www.theguardian.com/sport/2022/dec/12/paul-the-octopus-taiyo-the-otter-world-cup-psychic-animals">Animal Inspiration →</a>
+      </div>
+
+      <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
+      <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>Pick a unique team for each position. {filled}/12 filled.</p>
       </div>
       {past
         ? <div className="banner banner-red">🔒 Predictions are locked. Deadline was {deadlineDisplay}.</div>
