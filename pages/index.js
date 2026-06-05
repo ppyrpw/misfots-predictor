@@ -42,7 +42,7 @@ function StandingsPage() {
         <div className="info-card"><div className="ic-label">Teams</div><div className="ic-val">48</div><div className="ic-sub">Competing nations</div></div>
         <div className="info-card"><div className="ic-label">Leader</div><div className="ic-val" style={{ fontSize: 15 }}>{leader ? `${leader.flag} ${leader.team_name}` : '—'}</div><div className="ic-sub">{leader?.stage || '—'}</div></div>
         <div className="info-card"><div className="ic-label">Picks deadline</div><div className="ic-val" style={{ fontSize: 15 }}>Jun 11</div><div className="ic-sub">1:00 PM Central</div></div>
-        <div className="info-card"><div className="ic-label">Auto-updates</div><div className="ic-val" style={{ fontSize: 15 }}>30m</div><div className="ic-sub">via cron job</div></div>
+        <div className="info-card"><div className="ic-label">Auto-updates</div><div className="ic-val" style={{ fontSize: 15 }}>Daily</div><div className="ic-sub">at 9am UTC</div></div>
       </div>
       {loading ? <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading standings…</p> : (
         <div className="section-card">
