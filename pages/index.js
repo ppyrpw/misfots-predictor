@@ -202,8 +202,8 @@ function PredictPage({ onNavigate }) {
 
       <h2 style={{ fontSize: 18, fontWeight: 500 }}>Prepare to Predict</h2>
       <div style={{ display: 'flex', gap: 20, marginBottom: 20, flexWrap: 'wrap' }}>
-        <a href="https://theanalyst.com/competition/fifa-world-cup/predictions">Stats and Simulations →</a>
-        <a href="https://www.theguardian.com/sport/2022/dec/12/paul-the-octopus-taiyo-the-otter-world-cup-psychic-animals">Animal Inspiration →</a>
+        <a href="https://theanalyst.com/competition/fifa-world-cup/predictions" target="_blank">Stats and Simulations →</a>
+        <a href="https://www.theguardian.com/sport/2022/dec/12/paul-the-octopus-taiyo-the-otter-world-cup-psychic-animals" target="_blank">Animal Inspiration →</a>
       </div>
 
       <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
