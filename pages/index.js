@@ -50,7 +50,7 @@ function StandingsPage() {
             <thead><tr>
               <th style={{ width: 40 }}>#</th><th>Team</th><th>Stage</th>
               <th style={{ textAlign: 'right' }}>W</th><th style={{ textAlign: 'right' }}>D</th><th style={{ textAlign: 'right' }}>L</th>
-              <th style={{ textAlign: 'right' }}>GF</th><th style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th><th style={{ textAlign: 'right' }}>Pts</th>
+              <th style={{ textAlign: 'right' }}>GF</th><th style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th>
             </tr></thead>
             <tbody>
               {ranked.map((t, i) => {
@@ -68,8 +68,7 @@ function StandingsPage() {
                     <td className="num-cell">{t.losses}</td>
                     <td className="num-cell">{t.goals_for}</td>
                     <td className="num-cell">{t.goals_against}</td>
-                    <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>
-                    <td className="num-cell" style={{ fontWeight: 500 }}>{t.wins * 3 + t.draws}</td>
+                    <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>            
                   </tr>
                 )
               })}
