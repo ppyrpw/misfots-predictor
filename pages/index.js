@@ -351,14 +351,14 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>WC2026 Predictor</title>
+        <title>WC2026 Prediction Challenge</title>
         <meta name="description" content="FIFA World Cup 2026 prediction game" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <div className="app">
         <header className="header">
           <div>
-            <div className="logo-title">⚽ WC2026 Predictor</div>
+            <div className="logo-title">⚽ WC2026 Prediction Challenge</div>
             <div className="logo-sub">FIFA World Cup · USA / Canada / Mexico</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
