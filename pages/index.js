@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from './_app'
 import { TEAMS, PREDICTION_SLOTS, rankStandings, calcScore } from '../lib/constants'
 
-const DEADLINE = new Date(process.env.NEXT_PUBLIC_DEADLINE || '2026-06-11T18:00:00.000Z')
+const DEADLINE = new Date(process.env.NEXT_PUBLIC_DEADLINE || '2026-06-18T18:00:00.000Z')
 const sortedTeams = [...TEAMS].sort((a, b) => a.name.localeCompare(b.name))
 
 function stageClass(stage) {
@@ -146,6 +146,7 @@ function PredictPage({ onNavigate }) {
   const [saved, setSaved] = useState(false)
   const [loadingPicks, setLoadingPicks] = useState(true)
   const past = new Date() > DEADLINE
+  const deadlineDisplay = DEADLINE.toLocaleString('en-US', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/Chicago' })
 
   useEffect(() => {
     if (!user) return
@@ -198,8 +199,8 @@ function PredictPage({ onNavigate }) {
         <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>Pick a unique team for each position. {filled}/12 filled.</p>
       </div>
       {past
-        ? <div className="banner banner-red">🔒 Predictions are locked. Deadline was June 11 at 1:00 PM Central.</div>
-        : <div className="banner banner-amber">⏰ Predictions lock on <strong>June 11 at 1:00 PM Central</strong>. You can update any time before then.</div>}
+        ? <div className="banner banner-red">🔒 Predictions are locked. Deadline was {deadlineDisplay}.</div>
+        : <div className="banner banner-amber">⏰ Predictions lock on <strong>{deadlineDisplay}</strong>. You can update any time before then.</div>
       <div className="pred-section">
         <div className="pred-section-title">Top 8 finishers — positions 1 to 8</div>
         <div className="pred-grid">{topSlots.map(p => <SlotSelect key={p} pos={p} />)}</div>
