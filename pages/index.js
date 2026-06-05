@@ -158,6 +158,11 @@ function PredictPage({ onNavigate }) {
   }
 
   const handleSave = async () => {
+    const filled = PREDICTION_SLOTS.filter(p => picks[p]).length
+    if (filled > 0 && filled < 12) {
+      alert(`Please complete all 12 predictions before saving (${filled}/12 filled). To reset, clear all picks.`)
+      return
+    }
     setSaving(true)
     await fetch('/api/predictions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ picks }) })
     setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000)
