@@ -200,7 +200,7 @@ function PredictPage({ onNavigate }) {
       </div>
       {past
         ? <div className="banner banner-red">🔒 Predictions are locked. Deadline was {deadlineDisplay}.</div>
-        : <div className="banner banner-amber">⏰ Predictions lock on <strong>{deadlineDisplay}</strong>. You can update any time before then.</div>
+        : <div className="banner banner-amber">⏰ Predictions lock on <strong>{deadlineDisplay}</strong>. You can update any time before then.</div>}
       <div className="pred-section">
         <div className="pred-section-title">Top 8 finishers — positions 1 to 8</div>
         <div className="pred-grid">{topSlots.map(p => <SlotSelect key={p} pos={p} />)}</div>
