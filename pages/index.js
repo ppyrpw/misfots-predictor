@@ -360,6 +360,7 @@ export default function Home() {
           <div>
             <div className="logo-title">⚽ WC2026 Prediction Challenge</div>
             <div className="logo-sub">FIFA World Cup · USA / Canada / Mexico</div>
+            <div className="logo-sub">Predict the top 8 and bottom 4 teams for the upcoming world cup</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <nav className="nav">
