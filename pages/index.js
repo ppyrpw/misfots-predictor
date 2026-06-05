@@ -76,7 +76,7 @@ function StandingsPage() {
           </table>
         </div>
       )}
-      <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)' }}>Highlighted ranks = prediction positions (1–8 and 44–47)</p>
+      <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)' }}>Highlighted ranks = prediction positions (1–8 and 45–48)</p>
     </>
   )
 }
@@ -174,7 +174,7 @@ function PredictPage({ onNavigate }) {
   if (loadingPicks) return <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading your picks…</p>
 
   const topSlots = [1, 2, 3, 4, 5, 6, 7, 8]
-  const botSlots = [44, 45, 46, 47]
+  const botSlots = [45, 46, 47, 48]
   const filled = PREDICTION_SLOTS.filter(p => picks[p]).length
 
   const SlotSelect = ({ pos }) => {
@@ -205,7 +205,7 @@ function PredictPage({ onNavigate }) {
         <div className="pred-grid">{topSlots.map(p => <SlotSelect key={p} pos={p} />)}</div>
       </div>
       <div className="pred-section">
-        <div className="pred-section-title">Bottom 4 — positions 44 to 47</div>
+        <div className="pred-section-title">Bottom 4 — positions 45 to 48</div>
         <div className="pred-grid">{botSlots.map(p => <SlotSelect key={p} pos={p} />)}</div>
       </div>
       {!past && (
