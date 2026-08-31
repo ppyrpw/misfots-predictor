@@ -139,8 +139,9 @@ export function calcScore(picks: Record<string, string>, standings: Standing[]):
   return { total, filled }
 }
 
-// API -> canonical name map for common variants
+// API → canonical name map for common variants
 const API_TEAM_NAME_MAP: Record<string, string> = {
+  // exact API variants (lowercased) -> canonical name used in LEAGUES
   'man city': 'Manchester City',
   'manchester city fc': 'Manchester City',
   'man utd': 'Manchester United',
@@ -148,17 +149,23 @@ const API_TEAM_NAME_MAP: Record<string, string> = {
   'wolves': 'Wolverhampton Wanderers',
   'nottingham forest fc': 'Nottingham Forest',
   'qpr': 'Queens Park Rangers',
+  // add more as you see them in logs
 }
 
 /**
  * normaliseTeamName
- * - Try explicit mapping, then case-insensitive match against LEAGUES, then fallback to the API name
+ * - Try exact mapping from API_TEAM_NAME_MAP (lowercased)
+ * - Then try exact case-insensitive match against club names in LEAGUES
+ * - If nothing matches, return the API name unchanged (and optionally log it)
  */
 export function normaliseTeamName(apiName: string): string {
   if (!apiName) return apiName
   const key = apiName.trim().toLowerCase()
+
+  // 1) explicit mappings
   if (API_TEAM_NAME_MAP[key]) return API_TEAM_NAME_MAP[key]
 
+  // 2) try match against known league names
   for (const leagueKey of Object.keys(LEAGUES)) {
     const teams = LEAGUES[leagueKey].teams || []
     for (const t of teams) {
@@ -166,6 +173,8 @@ export function normaliseTeamName(apiName: string): string {
     }
   }
 
+  // 3) Not found — log so we can add to API_TEAM_NAME_MAP later
+  // (cron runs on server — these warnings will show in logs)
   console.warn(`normaliseTeamName: no mapping found for API name "${apiName}"`)
   return apiName
 }
