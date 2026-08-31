@@ -9,17 +9,46 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { normaliseTeamName } from '@/lib/constants'
 
+/**
+ * DEPRECATED: Old API-Football fixture-based approach
+ * Kept for reference only. Use fetchStandingsForLeague instead.
+ */
+/*
+
 async function fetchFixturesForLeague(leagueId: string | undefined, season: string) {
   if (!leagueId) return []
   const apiKey = process.env.API_FOOTBALL_KEY
   if (!apiKey) throw new Error('API_FOOTBALL_KEY not set')
-  const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=${season}`, {
-    headers: { 'x-rapidapi-key': apiKey, 'x-rapidapi-host': 'v3.football.api-sports.io' }
+  const res = await fetch(`http://api.football-data.org/v4/competitions/PL/standings`, {
+    headers: {'X-Auth-Token':  apiKey}
   })
   if (!res.ok) throw new Error(`API-Football error: ${res.status}`)
   const json = await res.json()
   return json.response ?? []
 }
+*/
+
+/**
+ * Fetch standings directly from football-data.org API
+ * Returns the standings object which already contains computed table
+ */
+async function fetchStandingsForLeague(leagueId: string | undefined, season: string) {
+  if (!leagueId) return []
+  const apiKey = process.env.FOOTBALL_DATA_API_KEY
+  if (!apiKey) throw new Error('FOOTBALL_DATA_API_KEY not set')
+  const res = await fetch(`https://api.football-data.org/v4/competitions/${leagueId}/standings?season=${season}`, {
+    headers: { 'X-Auth-Token': apiKey }
+  })
+  if (!res.ok) throw new Error(`Football-Data.org error: ${res.status}`)
+  const json = await res.json()
+  return json.standings ?? []
+}
+
+/**
+ * DEPRECATED: Old fixture-based computation
+ * Kept for reference only. Use parseLeagueStandingsFromAPI instead.
+ */
+/*
 
 async function computeLeagueTableFromFixtures(fixtures: any[]) {
   const stats: Record<string, any> = {}
@@ -57,6 +86,40 @@ async function computeLeagueTableFromFixtures(fixtures: any[]) {
   rows.forEach((r, i) => (r.rank = i + 1))
   return rows
 }
+*/
+
+/**
+ * Parse standings from football-data.org API response
+ * Extracts team data from pre-computed standings table
+ */
+async function parseLeagueStandingsFromAPI(standingsData: any[]) {
+  const rows: any[] = []
+  
+  // standingsData is array of standings objects (usually just one for TOTAL type)
+  for (const standing of standingsData) {
+    if (standing.type !== 'TOTAL') continue // skip group/stage standings
+    
+    // standing.table contains the teams
+    for (const entry of standing.table || []) {
+      const team = entry.team
+      const canonicalName = normaliseTeamName(team.name)
+      
+      rows.push({
+        team_name: canonicalName,
+        wins: entry.won || 0,
+        draws: entry.draw || 0,
+        losses: entry.lost || 0,
+        goals_for: entry.goalsFor || 0,
+        goals_against: entry.goalsAgainst || 0,
+        rank: entry.position || 0
+      })
+    }
+    
+    break // only use first TOTAL standing
+  }
+  
+  return rows
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Security: Vercel Cron sets this header automatically; manual calls need the secret query param
@@ -67,11 +130,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const season = process.env.SEASON || '2026'
   try {
-    const plFixtures = await fetchFixturesForLeague(process.env.PL_LEAGUE_ID, season)
-    const chFixtures = await fetchFixturesForLeague(process.env.CH_LEAGUE_ID, season)
+    const plStandings = await fetchStandingsForLeague(process.env.PL_LEAGUE_ID, season)
+    const chStandings = await fetchStandingsForLeague(process.env.CH_LEAGUE_ID, season)
 
-    const plTable = await computeLeagueTableFromFixtures(plFixtures)
-    const chTable = await computeLeagueTableFromFixtures(chFixtures)
+    const plTable = await parseLeagueStandingsFromAPI(plStandings)
+    const chTable = await parseLeagueStandingsFromAPI(chStandings)
 
     // Upsert standings: we'll tag with league so frontend can request combined or per-league views
     const upserts: any[] = []
