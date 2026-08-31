@@ -59,6 +59,9 @@ export const LEAGUES: Record<string, { key: string; name: string; teams: Team[] 
   },
 }
 
+// Flattened teams list for older UI/code that imports TEAMS
+export const TEAMS: Team[] = Object.values(LEAGUES).flatMap(l => (l.teams || []).map(t => ({ ...t })))
+
 export const PREDICTION_SLOTS = [
   // PL top 6
   ...Array.from({ length: 6 }, (_, i) => ({ id: `PL-${i + 1}`, label: `Premier League — Position ${i + 1}`, league: 'PL' })),
@@ -136,7 +139,33 @@ export function calcScore(picks: Record<string, string>, standings: Standing[]):
   return { total, filled }
 }
 
-// Minimal normaliser to satisfy cron imports. If later needed, expand mapping logic here.
-export function normaliseTeamName(name: string): string {
-  return name
+// API -> canonical name map for common variants
+const API_TEAM_NAME_MAP: Record<string, string> = {
+  'man city': 'Manchester City',
+  'manchester city fc': 'Manchester City',
+  'man utd': 'Manchester United',
+  'manchester united fc': 'Manchester United',
+  'wolves': 'Wolverhampton Wanderers',
+  'nottingham forest fc': 'Nottingham Forest',
+  'qpr': 'Queens Park Rangers',
+}
+
+/**
+ * normaliseTeamName
+ * - Try explicit mapping, then case-insensitive match against LEAGUES, then fallback to the API name
+ */
+export function normaliseTeamName(apiName: string): string {
+  if (!apiName) return apiName
+  const key = apiName.trim().toLowerCase()
+  if (API_TEAM_NAME_MAP[key]) return API_TEAM_NAME_MAP[key]
+
+  for (const leagueKey of Object.keys(LEAGUES)) {
+    const teams = LEAGUES[leagueKey].teams || []
+    for (const t of teams) {
+      if (t.name && t.name.trim().toLowerCase() === key) return t.name
+    }
+  }
+
+  console.warn(`normaliseTeamName: no mapping found for API name "${apiName}"`)
+  return apiName
 }
