@@ -26,6 +26,41 @@ function StandingsPage() {
   const ranked = rankStandings(standings)
   const leader = ranked[0]
 
+  // Separate standings by league
+  const plStandings = ranked.filter(t => t.league === 'PL')
+  const chStandings = ranked.filter(t => t.league === 'CH')
+
+  const renderStandingsTable = (teams, leagueName) => (
+    <div className="section-card" style={{ marginBottom: 24 }}>
+      <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>{leagueName}</h3>
+      <table className="data-table">
+        <thead><tr>
+          <th style={{ width: 40 }}>#</th><th>Club</th>
+          <th style={{ textAlign: 'right' }}>W</th><th style={{ textAlign: 'right' }}>D</th><th style={{ textAlign: 'right' }}>L</th>
+          <th style={{ textAlign: 'right' }}>GF</th><th style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th><th style={{ textAlign: 'right' }}>Pts</th>
+        </tr></thead>
+        <tbody>
+          {teams.map((t, i) => {
+            const gd = (t.goals_for ?? 0) - (t.goals_against ?? 0)
+            return (
+              <tr key={`${t.league}-${t.team_name}`}>
+                <td style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>{t.rank ?? i + 1}</td>
+                <td style={{ fontWeight: 500 }}>{t.team_name}</td>
+                <td className="num-cell">{t.wins ?? '—'}</td>
+                <td className="num-cell">{t.draws ?? '—'}</td>
+                <td className="num-cell">{t.losses ?? '—'}</td>
+                <td className="num-cell">{t.goals_for ?? '—'}</td>
+                <td className="num-cell">{t.goals_against ?? '—'}</td>
+                <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>
+                <td className="num-cell" style={{ fontWeight: 500 }}>{(t.wins ?? 0) * 3 + (t.draws ?? 0)}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
@@ -45,34 +80,13 @@ function StandingsPage() {
         <div className="info-card"><div className="ic-label">Updated every</div><div className="ic-val" style={{ fontSize: 15 }}>30m</div><div className="ic-sub">Auto via cron</div></div>
       </div>
 
-      {loading ? <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading standings…</p> : (
-        <div className="section-card">
-          <table className="data-table">
-            <thead><tr>
-              <th style={{ width: 40 }}>#</th><th>Club</th>
-              <th style={{ textAlign: 'right' }}>W</th><th style={{ textAlign: 'right' }}>D</th><th style={{ textAlign: 'right' }}>L</th>
-              <th style={{ textAlign: 'right' }}>GF</th><th style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th><th style={{ textAlign: 'right' }}>Pts</th>
-            </tr></thead>
-            <tbody>
-              {ranked.map((t, i) => {
-                const gd = (t.goals_for ?? 0) - (t.goals_against ?? 0)
-                return (
-                  <tr key={`${t.league}-${t.team_name}`}>
-                    <td style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>{t.rank ?? i + 1}</td>
-                    <td style={{ fontWeight: 500 }}>{t.team_name}</td>
-                    <td className="num-cell">{t.wins ?? '—'}</td>
-                    <td className="num-cell">{t.draws ?? '—'}</td>
-                    <td className="num-cell">{t.losses ?? '—'}</td>
-                    <td className="num-cell">{t.goals_for ?? '—'}</td>
-                    <td className="num-cell">{t.goals_against ?? '—'}</td>
-                    <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>
-                    <td className="num-cell" style={{ fontWeight: 500 }}>{(t.wins ?? 0) * 3 + (t.draws ?? 0)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+      {loading ? (
+        <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading standings…</p>
+      ) : (
+        <>
+          {plStandings.length > 0 && renderStandingsTable(plStandings, 'Premier League')}
+          {chStandings.length > 0 && renderStandingsTable(chStandings, 'Championship')}
+        </>
       )}
       <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)' }}>Highlighted ranks = prediction positions</p>
     </>
