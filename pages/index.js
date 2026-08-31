@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import { useEffect, useState } from 'react'
 import { useAuth } from './_app'
-import { TEAMS, PREDICTION_SLOTS, rankStandings, calcScore } from '../lib/constants'
+import { TEAMS, LEAGUES, PREDICTION_SLOTS, rankStandings, calcScore } from '../lib/constants'
 
 const DEADLINE = new Date(process.env.NEXT_PUBLIC_DEADLINE || '2026-06-18T18:00:00.000Z')
 const sortedTeams = [...TEAMS].sort((a, b) => a.name.localeCompare(b.name))
@@ -88,6 +88,8 @@ function LeaguePage({ onNavigate }) {
     fetch('/api/league').then(r => r.json()).then(d => setTable(d.table || [])).finally(() => setLoading(false))
   }, [])
 
+  const required = PREDICTION_SLOTS.length
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
@@ -121,7 +123,7 @@ function LeaguePage({ onNavigate }) {
                     </td>
                     <td style={{ fontWeight: 500 }}>{row.name}{user?.email === row.email && <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>(you)</span>}</td>
                     <td style={{ color: 'var(--text-2)', fontSize: 13 }}>{row.email}</td>
-                    <td className="num-cell">{row.filled}/12</td>
+                    <td className="num-cell">{row.filled}/{required}</td>
                     <td className="num-cell"><span className="score-pill">{row.score} pts</span></td>
                   </tr>
                 ))}
@@ -130,7 +132,7 @@ function LeaguePage({ onNavigate }) {
           </div>
         )}
       <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)', marginTop: 12 }}>
-        Score = Σ |predicted rank − actual rank| across your 12 picks. Lower is better.
+        Score = Σ |predicted rank − actual rank| across your {required} picks. Lower is better.
       </p>
     </>
   )
@@ -150,15 +152,16 @@ function PredictPage({ onNavigate }) {
     fetch('/api/predictions').then(r => r.json()).then(d => setPicks(d.picks || {})).finally(() => setLoadingPicks(false))
   }, [user])
 
-  const handleChange = (pos, val) => {
-    setPicks(prev => { const next = { ...prev }; if (val) next[pos] = val; else delete next[pos]; return next })
+  const handleChange = (slotId, val) => {
+    setPicks(prev => { const next = { ...prev }; if (val) next[slotId] = val; else delete next[slotId]; return next })
     setSaved(false)
   }
 
   const handleSave = async () => {
-    const filled = PREDICTION_SLOTS.filter(p => picks[p]).length
-    if (filled > 0 && filled < 12) {
-      alert(`Please complete all 12 predictions before saving (${filled}/12 filled). To reset, clear all picks.`)
+    const filled = PREDICTION_SLOTS.filter(p => picks[p.id]).length
+    const required = PREDICTION_SLOTS.length
+    if (filled > 0 && filled < required) {
+      alert(`Please complete all ${required} predictions before saving (${filled}/${required} filled). To reset, clear all picks.`)
       return
     }
     setSaving(true)
@@ -176,19 +179,26 @@ function PredictPage({ onNavigate }) {
 
   if (loadingPicks) return <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading your picks…</p>
 
-  const topSlots = [1, 2, 3, 4, 5, 6, 7, 8]
-  const botSlots = [45, 46, 47, 48]
-  const filled = PREDICTION_SLOTS.filter(p => picks[p]).length
+  // Separate slots by league and tier
+  const plTopSlots = PREDICTION_SLOTS.filter(s => s.league === 'PL' && s.id.match(/PL-[1-6]$/))
+  const plBotSlots = PREDICTION_SLOTS.filter(s => s.league === 'PL' && s.id.match(/PL-(18|19|20)$/))
+  const chTopSlots = PREDICTION_SLOTS.filter(s => s.league === 'CH' && s.id.match(/CH-[1-2]$/))
+  const chBotSlots = PREDICTION_SLOTS.filter(s => s.league === 'CH' && s.id.match(/CH-(22|23|24)$/))
+  
+  const filled = PREDICTION_SLOTS.filter(p => picks[p.id]).length
+  const required = PREDICTION_SLOTS.length
 
-  const SlotSelect = ({ pos }) => {
-    const val = picks[pos] || ''
-    const usedElsewhere = new Set(Object.entries(picks).filter(([k]) => parseInt(k) !== pos).map(([, v]) => v))
+  const SlotSelect = ({ slot }) => {
+    const val = picks[slot.id] || ''
+    const usedElsewhere = new Set(Object.entries(picks).filter(([k]) => k !== slot.id).map(([, v]) => v))
+    // Scope teams to this slot's league only
+    const leagueTeams = (LEAGUES[slot.league]?.teams || []).sort((a, b) => a.name.localeCompare(b.name))
     return (
       <div className="pred-slot">
-        <div className="pred-slot-label">Position {pos}</div>
-        <select className="pred-select" value={val} disabled={past} onChange={e => handleChange(pos, e.target.value)}>
+        <div className="pred-slot-label">{slot.label}</div>
+        <select className="pred-select" value={val} disabled={past} onChange={e => handleChange(slot.id, e.target.value)}>
           <option value="">— Select team —</option>
-          {sortedTeams.map(t => <option key={t.name} value={t.name} disabled={usedElsewhere.has(t.name) && t.name !== val}>{t.flag} {t.name}</option>)}
+          {leagueTeams.map(t => <option key={t.name} value={t.name} disabled={usedElsewhere.has(t.name) && t.name !== val}>{t.flag} {t.name}</option>)}
         </select>
       </div>
     )
@@ -197,27 +207,42 @@ function PredictPage({ onNavigate }) {
   return (
     <>
       <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 500 }}>Prepare to Predict</h2>
+        <div style={{ display: 'flex', gap: 20, marginBottom: 20, flexWrap: 'wrap' }}>
+          <a href="https://theanalyst.com/competition/fifa-world-cup/predictions" target="_blank">Stats and Simulations →</a>
+          <a href="https://www.theguardian.com/sport/2022/dec/12/paul-the-octopus-taiyo-the-otter-world-cup-psychic-animals" target="_blank">Animal Inspiration →</a>
+        </div>
 
-      <h2 style={{ fontSize: 18, fontWeight: 500 }}>Prepare to Predict</h2>
-      <div style={{ display: 'flex', gap: 20, marginBottom: 20, flexWrap: 'wrap' }}>
-        <a href="https://theanalyst.com/competition/fifa-world-cup/predictions" target="_blank">Stats and Simulations →</a>
-        <a href="https://www.theguardian.com/sport/2022/dec/12/paul-the-octopus-taiyo-the-otter-world-cup-psychic-animals" target="_blank">Animal Inspiration →</a>
+        <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
+        <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>Pick a unique team for each position. {filled}/{required} filled.</p>
       </div>
-
-      <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
-      <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>Pick a unique team for each position. {filled}/12 filled.</p>
-      </div>
+      
       {past
         ? <div className="banner banner-red">🔒 Predictions are locked. Deadline was {deadlineDisplay}.</div>
         : <div className="banner banner-amber">⏰ Predictions lock on <strong>{deadlineDisplay}</strong>. You can update any time before then.</div>}
+      
+      {/* Premier League */}
       <div className="pred-section">
-        <div className="pred-section-title">Top 8 finishers — positions 1 to 8</div>
-        <div className="pred-grid">{topSlots.map(p => <SlotSelect key={p} pos={p} />)}</div>
+        <div className="pred-section-title">Premier League — Top 6</div>
+        <div className="pred-grid">{plTopSlots.map(s => <SlotSelect key={s.id} slot={s} />)}</div>
       </div>
+      
       <div className="pred-section">
-        <div className="pred-section-title">Bottom 4 — positions 45 to 48</div>
-        <div className="pred-grid">{botSlots.map(p => <SlotSelect key={p} pos={p} />)}</div>
+        <div className="pred-section-title">Premier League — Bottom 3 (Relegation)</div>
+        <div className="pred-grid">{plBotSlots.map(s => <SlotSelect key={s.id} slot={s} />)}</div>
       </div>
+
+      {/* Championship */}
+      <div className="pred-section">
+        <div className="pred-section-title">Championship — Top 2</div>
+        <div className="pred-grid">{chTopSlots.map(s => <SlotSelect key={s.id} slot={s} />)}</div>
+      </div>
+      
+      <div className="pred-section">
+        <div className="pred-section-title">Championship — Bottom 3 (Relegation)</div>
+        <div className="pred-grid">{chBotSlots.map(s => <SlotSelect key={s.id} slot={s} />)}</div>
+      </div>
+
       {!past && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
           <button className="btn-primary" style={{ width: 'auto', padding: '10px 24px' }} onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save predictions'}</button>
@@ -318,6 +343,7 @@ function ProfilePage({ onNavigate }) {
   if (!user) return <div className="empty-state"><h3>Not signed in</h3></div>
 
   const doLogout = async () => { await logout(); onNavigate('standings') }
+  const required = PREDICTION_SLOTS.length
 
   return (
     <div style={{ maxWidth: 520 }}>
@@ -327,13 +353,13 @@ function ProfilePage({ onNavigate }) {
       </div>
       <div className="section-card" style={{ padding: '20px 24px', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 500 }}>[...]</div>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 500 }}>{user.name.charAt(0)}</div>
           <div><div style={{ fontWeight: 500, fontSize: 16 }}>{user.name}</div><div style={{ fontSize: 13, color: 'var(--text-2)' }}>{user.email}</div></div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
           <div className="info-card"><div className="ic-label">Rank</div><div className="ic-val">{stats ? stats.rank : '—'}</div><div className="ic-sub">of {stats?.total || '—'}</div></div>
           <div className="info-card"><div className="ic-label">Score</div><div className="ic-val">{stats ? stats.score : '—'}</div><div className="ic-sub">total pts</div></div>
-          <div className="info-card"><div className="ic-label">Picks</div><div className="ic-val">{stats ? `${stats.filled}/12` : '—'}</div><div className="ic-sub">completed</div></div>
+          <div className="info-card"><div className="ic-label">Picks</div><div className="ic-val">{stats ? `${stats.filled}/${required}` : '—'}</div><div className="ic-sub">completed</div></div>
         </div>
       </div>
       <button className="btn-primary" onClick={() => onNavigate('predict')}>Edit my predictions →</button>
