@@ -59,6 +59,9 @@ export const LEAGUES: Record<string, { key: string; name: string; teams: Team[] 
   },
 }
 
+// Flattened teams list for older UI/code that imports TEAMS
+export const TEAMS: Team[] = Object.values(LEAGUES).flatMap(l => (l.teams || []).map(t => ({ ...t })))
+
 export const PREDICTION_SLOTS = [
   // PL top 6
   ...Array.from({ length: 6 }, (_, i) => ({ id: `PL-${i + 1}`, label: `Premier League — Position ${i + 1}`, league: 'PL' })),
