@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
 import { PREDICTION_SLOTS } from '@/lib/constants'
 
-const DEADLINE = new Date(process.env.NEXT_PUBLIC_DEADLINE || '2026-06-18T18:00:00.000Z')
+const DEADLINE = new Date(process.env.NEXT_PUBLIC_DEADLINE || '2026-09-18T18:00:00.000Z')
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const user = getSession(req)
