@@ -13,8 +13,8 @@ async function fetchFixturesForLeague(leagueId: string | undefined, season: stri
   if (!leagueId) return []
   const apiKey = process.env.API_FOOTBALL_KEY
   if (!apiKey) throw new Error('API_FOOTBALL_KEY not set')
-  const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=${season}`, {
-    headers: { 'x-rapidapi-key': apiKey, 'x-rapidapi-host': 'v3.football.api-sports.io' }
+  const res = await fetch(`http://api.football-data.org/v4/competitions/PL/standings`, {
+    headers: {'X-Auth-Token':  apiKey}
   })
   if (!res.ok) throw new Error(`API-Football error: ${res.status}`)
   const json = await res.json()
