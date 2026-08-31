@@ -18,12 +18,12 @@ async function sendResetEmail(email, name, newPassword) {
       'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM || 'WC2026 Predictor <noreply@yourdomain.com>',
+      from: process.env.EMAIL_FROM || 'Mystic Misfots <noreply@yourdomain.com>',
       to: email,
-      subject: 'Your new WC2026 Predictor password',
+      subject: 'Your new Mystic Misfots password',
       html: `
         <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 16px">
-          <h2 style="font-size:20px;font-weight:600;margin-bottom:8px">⚽ WC2026 Predictor</h2>
+          <h2 style="font-size:20px;font-weight:600;margin-bottom:8px">⚽ Mystic Misfots</h2>
           <p style="color:#6b6860;margin-bottom:24px">Password reset</p>
           <p>Hi ${name},</p>
           <p style="margin-top:12px">Your password has been reset. Here is your new temporary password:</p>

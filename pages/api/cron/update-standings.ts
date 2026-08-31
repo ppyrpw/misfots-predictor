@@ -1,39 +1,61 @@
 /**
  * /api/cron/update-standings
  *
- * Called automatically by Vercel Cron (see vercel.json).
- * Also callable manually: GET /api/cron/update-standings?secret=YOUR_CRON_SECRET
- *
- * What it does:
- *  1. Fetches all WC2026 match results from API-Football (league=1, season=2026)
- *  2. Computes wins/draws/losses/goals per team and their furthest stage reached
- *  3. Writes the result back to the `standings` table in Supabase
+ * Now supports fetching standings for Premier League (PL) and Championship (CH).
+ * Set env vars PL_LEAGUE_ID and CH_LEAGUE_ID (API-Football numeric league IDs) and API_FOOTBALL_KEY.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { normaliseTeamName } from '@/lib/constants'
 
-// API-Football stage name → our stage name
-const STAGE_MAP: Record<string, string> = {
-  'Group Stage': 'Group Stage',
-  '3rd Place Final': 'Semi-Final',  // lost semi = 3rd/4th
-  'Round of 32': 'Round of 32',
-  'Round of 16': 'Round of 16',
-  'Quarter-finals': 'Quarter-Final',
-  'Semi-finals': 'Semi-Final',
-  'Final': 'Runner-Up',             // loser of final
+async function fetchFixturesForLeague(leagueId: string | undefined, season: string) {
+  if (!leagueId) return []
+  const apiKey = process.env.API_FOOTBALL_KEY
+  if (!apiKey) throw new Error('API_FOOTBALL_KEY not set')
+  const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=${season}`, {
+    headers: { 'x-rapidapi-key': apiKey, 'x-rapidapi-host': 'v3.football.api-sports.io' }
+  })
+  if (!res.ok) throw new Error(`API-Football error: ${res.status}`)
+  const json = await res.json()
+  return json.response ?? []
 }
 
-const STAGE_RANK: Record<string, number> = {
-  'Group Stage': 0, 'Round of 32': 1, 'Round of 16': 2,
-  'Quarter-Final': 3, 'Semi-Final': 4, 'Runner-Up': 5, 'Champion': 6,
-}
+async function computeLeagueTableFromFixtures(fixtures: any[]) {
+  const stats: Record<string, any> = {}
+  const ensure = (name: string) => { if (!stats[name]) stats[name] = { wins: 0, draws: 0, losses: 0, goals_for: 0, goals_against: 0 } }
 
-type TeamStats = {
-  wins: number; draws: number; losses: number
-  goals_for: number; goals_against: number
-  stage: string
+  for (const f of fixtures) {
+    const scoreA = f.teams?.home && f.goals && typeof f.goals.home === 'number' ? f.goals.home : null
+    const scoreB = f.teams?.away && f.goals && typeof f.goals.away === 'number' ? f.goals.away : null
+    if (scoreA === null || scoreB === null) continue // skip unplayed
+    const home = normaliseTeamName(f.teams.home.name)
+    const away = normaliseTeamName(f.teams.away.name)
+    ensure(home); ensure(away)
+    stats[home].goals_for += scoreA
+    stats[home].goals_against += scoreB
+    stats[away].goals_for += scoreB
+    stats[away].goals_against += scoreA
+    if (scoreA > scoreB) { stats[home].wins++ ; stats[away].losses++ }
+    else if (scoreA < scoreB) { stats[away].wins++ ; stats[home].losses++ }
+    else { stats[home].draws++ ; stats[away].draws++ }
+  }
+
+  const rows = Object.entries(stats).map(([team, s]) => ({ team_name: team, ...s }))
+  // sort by points -> gd -> gf
+  rows.sort((a, b) => {
+    const pa = a.wins * 3 + a.draws
+    const pb = b.wins * 3 + b.draws
+    if (pa !== pb) return pb - pa
+    const gda = a.goals_for - a.goals_against
+    const gdb = b.goals_for - b.goals_against
+    if (gda !== gdb) return gdb - gda
+    return b.goals_for - a.goals_for
+  })
+
+  // attach rank
+  rows.forEach((r, i) => (r.rank = i + 1))
+  return rows
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -43,97 +65,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  const apiKey = process.env.API_FOOTBALL_KEY
-  if (!apiKey) return res.status(500).json({ error: 'API_FOOTBALL_KEY not set' })
-
+  const season = process.env.SEASON || '2026'
   try {
-    // Fetch all fixtures for WC 2026 from API-Football
-    const response = await fetch(
-      'https://v3.football.api-sports.io/fixtures?league=1&season=2026',
-      {
-        headers: {
-          'x-rapidapi-key': apiKey,
-          'x-rapidapi-host': 'v3.football.api-sports.io',
-        },
-      }
-    )
+    const plFixtures = await fetchFixturesForLeague(process.env.PL_LEAGUE_ID, season)
+    const chFixtures = await fetchFixturesForLeague(process.env.CH_LEAGUE_ID, season)
 
-    if (!response.ok) throw new Error(`API-Football error: ${response.status}`)
-    const json = await response.json()
-    const fixtures = json.response ?? []
+    const plTable = await computeLeagueTableFromFixtures(plFixtures)
+    const chTable = await computeLeagueTableFromFixtures(chFixtures)
 
-    // Build per-team stats from completed fixtures
-    const stats: Record<string, TeamStats> = {}
+    // Upsert standings: we'll tag with league so frontend can request combined or per-league views
+    const upserts: any[] = []
+    plTable.forEach(r => upserts.push({ league: 'PL', team_name: r.team_name, wins: r.wins, draws: r.draws, losses: r.losses, goals_for: r.goals_for, goals_against: r.goals_against, rank: r.rank }))
+    chTable.forEach(r => upserts.push({ league: 'CH', team_name: r.team_name, wins: r.wins, draws: r.draws, losses: r.losses, goals_for: r.goals_for, goals_against: r.goals_against, rank: r.rank }))
 
-    const ensure = (name: string) => {
-      if (!stats[name]) stats[name] = { wins: 0, draws: 0, losses: 0, goals_for: 0, goals_against: 0, stage: 'Group Stage' }
+    // Clear existing standings for these leagues then insert
+    await supabaseAdmin.from('standings').delete().in('league', ['PL', 'CH'])
+    for (const row of upserts) {
+      await supabaseAdmin.from('standings').insert(row)
     }
 
-    const upgradeStage = (team: string, apiStage: string, isWinner: boolean) => {
-      let mapped = STAGE_MAP[apiStage] ?? 'Group Stage'
-      // The Final winner becomes Champion
-      if (apiStage === 'Final' && isWinner) mapped = 'Champion'
-      const current = STAGE_RANK[stats[team].stage] ?? 0
-      const next = STAGE_RANK[mapped] ?? 0
-      if (next > current) stats[team].stage = mapped
-    }
-
-    for (const fixture of fixtures) {
-      const status = fixture.fixture?.status?.short
-      if (!['FT', 'AET', 'PEN'].includes(status)) continue  // skip unplayed/live
-
-      const home = normaliseTeamName(fixture.teams?.home?.name ?? '')
-      const away = normaliseTeamName(fixture.teams?.away?.name ?? '')
-      const hg = fixture.goals?.home ?? 0
-      const ag = fixture.goals?.away ?? 0
-      const apiStage = fixture.league?.round ?? 'Group Stage'
-
-      ensure(home); ensure(away)
-
-      stats[home].goals_for += hg
-      stats[home].goals_against += ag
-      stats[away].goals_for += ag
-      stats[away].goals_against += hg
-
-      if (hg > ag) {
-        stats[home].wins++; stats[away].losses++
-        upgradeStage(home, apiStage, true)
-        upgradeStage(away, apiStage, false)
-      } else if (ag > hg) {
-        stats[away].wins++; stats[home].losses++
-        upgradeStage(away, apiStage, true)
-        upgradeStage(home, apiStage, false)
-      } else {
-        stats[home].draws++; stats[away].draws++
-        upgradeStage(home, apiStage, false)
-        upgradeStage(away, apiStage, false)
-      }
-    }
-
-    // Upsert into Supabase
-    const updates = Object.entries(stats).map(([team_name, s]) => ({
-      team_name,
-      stage: s.stage,
-      wins: s.wins,
-      draws: s.draws,
-      losses: s.losses,
-      goals_for: s.goals_for,
-      goals_against: s.goals_against,
-      updated_at: new Date().toISOString(),
-    }))
-
-    if (updates.length > 0) {
-      const { error } = await supabaseAdmin
-        .from('standings')
-        .upsert(updates, { onConflict: 'team_name' })
-      if (error) throw error
-    }
-
-    console.log(`[cron] Updated ${updates.length} teams from ${fixtures.length} fixtures`)
-    return res.status(200).json({ ok: true, teamsUpdated: updates.length, fixturesProcessed: fixtures.length })
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[cron] Failed:', message)
-    return res.status(500).json({ error: message })
+    return res.status(200).json({ ok: true, teamsUpdated: upserts.length })
+  } catch (err: any) {
+    console.error(err)
+    return res.status(500).json({ error: err.message || String(err) })
   }
 }
