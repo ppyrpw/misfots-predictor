@@ -135,3 +135,8 @@ export function calcScore(picks: Record<string, string>, standings: Standing[]):
 
   return { total, filled }
 }
+
+// Minimal normaliser to satisfy cron imports. If later needed, expand mapping logic here.
+export function normaliseTeamName(name: string): string {
+  return name
+}
