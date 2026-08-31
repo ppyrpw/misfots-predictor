@@ -1,135 +1,137 @@
-export const TEAMS = [
-  { name: 'United States', flag: '🇺🇸' },
-  { name: 'Mexico', flag: '🇲🇽' },
-  { name: 'Canada', flag: '🇨🇦' },
-  { name: 'Panama', flag: '🇵🇦' },
-  { name: 'Haiti', flag: '🇭🇹' },
-  { name: 'Curaçao', flag: '🇨🇼' },
-  { name: 'Argentina', flag: '🇦🇷' },
-  { name: 'Brazil', flag: '🇧🇷' },
-  { name: 'Colombia', flag: '🇨🇴' },
-  { name: 'Uruguay', flag: '🇺🇾' },
-  { name: 'Ecuador', flag: '🇪🇨' },
-  { name: 'Paraguay', flag: '🇵🇾' },
-  { name: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-  { name: 'France', flag: '🇫🇷' },
-  { name: 'Germany', flag: '🇩🇪' },
-  { name: 'Spain', flag: '🇪🇸' },
-  { name: 'Portugal', flag: '🇵🇹' },
-  { name: 'Netherlands', flag: '🇳🇱' },
-  { name: 'Belgium', flag: '🇧🇪' },
-  { name: 'Croatia', flag: '🇭🇷' },
-  { name: 'Switzerland', flag: '🇨🇭' },
-  { name: 'Norway', flag: '🇳🇴' },
-  { name: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
-  { name: 'Austria', flag: '🇦🇹' },
-  { name: 'Czech Republic', flag: '🇨🇿' },
-  { name: 'Bosnia & Herzegovina', flag: '🇧🇦' },
-  { name: 'Sweden', flag: '🇸🇪' },
-  { name: 'Türkiye', flag: '🇹🇷' },
-  { name: 'Japan', flag: '🇯🇵' },
-  { name: 'South Korea', flag: '🇰🇷' },
-  { name: 'Australia', flag: '🇦🇺' },
-  { name: 'Iran', flag: '🇮🇷' },
-  { name: 'Saudi Arabia', flag: '🇸🇦' },
-  { name: 'Qatar', flag: '🇶🇦' },
-  { name: 'Iraq', flag: '🇮🇶' },
-  { name: 'Jordan', flag: '🇯🇴' },
-  { name: 'Uzbekistan', flag: '🇺🇿' },
-  { name: 'Morocco', flag: '🇲🇦' },
-  { name: 'Egypt', flag: '🇪🇬' },
-  { name: 'Algeria', flag: '🇩🇿' },
-  { name: 'Ghana', flag: '🇬🇭' },
-  { name: 'Ivory Coast', flag: '🇨🇮' },
-  { name: 'Tunisia', flag: '🇹🇳' },
-  { name: 'Senegal', flag: '🇸🇳' },
-  { name: 'South Africa', flag: '🇿🇦' },
-  { name: 'DR Congo', flag: '🇨🇩' },
-  { name: 'Cape Verde', flag: '🇨🇻' },
-  { name: 'New Zealand', flag: '🇳🇿' },
+export type Team = { id?: string; name: string; flag?: string; emoji?: string }
+
+export const LEAGUES: Record<string, { key: string; name: string; teams: Team[] }> = {
+  PL: {
+    key: 'PL',
+    name: 'Premier League',
+    teams: [
+      { name: 'Arsenal' },
+      { name: 'Aston Villa' },
+      { name: 'Bournemouth' },
+      { name: 'Brentford' },
+      { name: 'Brighton & Hove Albion' },
+      { name: 'Chelsea' },
+      { name: 'Coventry City' },
+      { name: 'Crystal Palace' },
+      { name: 'Everton' },
+      { name: 'Fulham' },
+      { name: 'Hull City' },
+      { name: 'Ipswich Town' },
+      { name: 'Leeds United' },
+      { name: 'Liverpool' },
+      { name: 'Manchester City' },
+      { name: 'Manchester United' },
+      { name: 'Newcastle United' },
+      { name: 'Nottingham Forest' },
+      { name: 'Sunderland' },
+      { name: 'Tottenham Hotspur' },
+    ],
+  },
+  CH: {
+    key: 'CH',
+    name: 'Championship',
+    teams: [
+      { name: 'Birmingham City' },
+      { name: 'Blackburn Rovers' },
+      { name: 'Bolton Wanderers' },
+      { name: 'Bristol City' },
+      { name: 'Burnley' },
+      { name: 'Cardiff City' },
+      { name: 'Charlton Athletic' },
+      { name: 'Derby County' },
+      { name: 'Lincoln City' },
+      { name: 'Middlesbrough' },
+      { name: 'Millwall' },
+      { name: 'Norwich City' },
+      { name: 'Portsmouth' },
+      { name: 'Preston North End' },
+      { name: 'Queens Park Rangers' },
+      { name: 'Sheffield United' },
+      { name: 'Southampton' },
+      { name: 'Stoke City' },
+      { name: 'Swansea City' },
+      { name: 'Watford' },
+      { name: 'West Bromwich Albion' },
+      { name: 'West Ham United' },
+      { name: 'Wolverhampton Wanderers' },
+      { name: 'Wrexham' },
+    ],
+  },
+}
+
+export const PREDICTION_SLOTS = [
+  // PL top 6
+  ...Array.from({ length: 6 }, (_, i) => ({ id: `PL-${i + 1}`, label: `Premier League — Position ${i + 1}`, league: 'PL' })),
+  // PL bottom 3 (18-20)
+  ...[18, 19, 20].map(pos => ({ id: `PL-${pos}`, label: `Premier League — Position ${pos} (Relegation)`, league: 'PL' })),
+
+  // CH top 2
+  ...Array.from({ length: 2 }, (_, i) => ({ id: `CH-${i + 1}`, label: `Championship — Position ${i + 1}`, league: 'CH' })),
+  // CH bottom 3 (22-24)
+  ...[22, 23, 24].map(pos => ({ id: `CH-${pos}`, label: `Championship — Position ${pos} (Relegation)`, league: 'CH' })),
 ]
 
-// The 12 prediction slots: top 8 and bottom 4
-export const PREDICTION_SLOTS = [1, 2, 3, 4, 5, 6, 7, 8, 45, 46, 47, 48]
-
-export const STAGE_RANK: Record<string, number> = {
-  'Group Stage': 0,
-  'Round of 32': 1,
-  'Round of 16': 2,
-  'Quarter-Final': 3,
-  'Semi-Final': 4,
-  'Runner-Up': 5,
-  'Champion': 6,
-}
+export const REQUIRED_PICKS = PREDICTION_SLOTS.length // 14
 
 export type Standing = {
   team_name: string
-  flag: string
-  stage: string
-  wins: number
-  draws: number
-  losses: number
-  goals_for: number
-  goals_against: number
-  rank?: number
+  flag?: string
+  wins?: number
+  draws?: number
+  losses?: number
+  goals_for?: number
+  goals_against?: number
+  rank?: number // 1-based position in the final table for that league
+  league?: string
 }
 
 export function rankStandings(teams: Standing[]): Standing[] {
+  const hasRanks = teams.every(t => typeof t.rank === 'number')
+  if (hasRanks) {
+    return [...teams].sort((a, b) => (a.rank! - b.rank!))
+  }
   return [...teams].sort((a, b) => {
-    const sa = STAGE_RANK[a.stage] ?? 0
-    const sb = STAGE_RANK[b.stage] ?? 0
-    if (sa !== sb) return sb - sa
-    const pa = a.wins * 3 + a.draws
-    const pb = b.wins * 3 + b.draws
+    const pa = (a.wins ?? 0) * 3 + (a.draws ?? 0)
+    const pb = (b.wins ?? 0) * 3 + (b.draws ?? 0)
     if (pa !== pb) return pb - pa
-    const gda = a.goals_for - a.goals_against
-    const gdb = b.goals_for - b.goals_against
+    const gda = (a.goals_for ?? 0) - (a.goals_against ?? 0)
+    const gdb = (b.goals_for ?? 0) - (b.goals_against ?? 0)
     if (gda !== gdb) return gdb - gda
-    return b.goals_for - a.goals_for
+    return (b.goals_for ?? 0) - (a.goals_for ?? 0)
   })
 }
 
-export function calcScore(
-  picks: Record<string, string>,
-  ranked: Standing[]
-): { total: number; filled: number } {
-  const rankMap: Record<string, number> = {}
-  ranked.forEach((t, i) => { rankMap[t.team_name] = i + 1 })
-  let total = 0, filled = 0
-  PREDICTION_SLOTS.forEach(pos => {
-    const pick = picks[pos]
-    if (pick) {
-      filled++
-      const actual = rankMap[pick] ?? pos
-      total += Math.abs(actual - pos)
+export function calcScore(picks: Record<string, string>, standings: Standing[]): { total: number; filled: number } {
+  let total = 0
+  let filled = 0
+
+  const leagueMaps: Record<string, Record<string, number>> = {}
+  standings.forEach(s => {
+    if (!s.league || typeof s.rank !== 'number') return
+    leagueMaps[s.league] = leagueMaps[s.league] || {}
+    leagueMaps[s.league][s.team_name] = s.rank!
+  })
+
+  PREDICTION_SLOTS.forEach(slot => {
+    const pick = picks[slot.id]
+    if (!pick) return
+    filled++
+    const leagueMap = leagueMaps[slot.league] || {}
+    const actualRank = leagueMap[pick]
+    const [, posStr] = slot.id.split('-')
+    const pos = parseInt(posStr, 10)
+    if (actualRank === pos) {
+      total += 3
+    } else {
+      if (slot.league === 'PL') {
+        if ((pos >= 1 && pos <= 6) && actualRank && actualRank >= 1 && actualRank <= 6) total += 1
+        else if ((pos >= 18 && pos <= 20) && actualRank && actualRank >= 18 && actualRank <= 20) total += 1
+      } else if (slot.league === 'CH') {
+        if ((pos >= 1 && pos <= 2) && actualRank && actualRank >= 1 && actualRank <= 2) total += 1
+        else if ((pos >= 22 && pos <= 24) && actualRank && actualRank >= 22 && actualRank <= 24) total += 1
+      }
     }
   })
+
   return { total, filled }
-}
-
-// API-Football name → our canonical name mapping
-// (their names sometimes differ slightly)
-export const API_TEAM_NAME_MAP: Record<string, string> = {
-  'USA': 'United States',
-  'United States': 'United States',
-  'Curacao': 'Curaçao',
-  'Bosnia and Herzegovina': 'Bosnia & Herzegovina',
-  'Turkey': 'Türkiye',
-  'Turkiye': 'Türkiye',
-  'Korea Republic': 'South Korea',
-  'South Korea': 'South Korea',
-  'IR Iran': 'Iran',
-  'Congo DR': 'DR Congo',
-  'DR Congo': 'DR Congo',
-  'Ivory Coast': 'Ivory Coast',
-  "Côte d'Ivoire": 'Ivory Coast',
-  'Cape Verde Islands': 'Cape Verde',
-  'Cape Verde': 'Cape Verde',
-  'Czechia': 'Czech Republic',
-  'Czech Republic': 'Czech Republic',
-  // everything else maps to itself
-}
-
-export function normaliseTeamName(apiName: string): string {
-  return API_TEAM_NAME_MAP[apiName] ?? apiName
 }
