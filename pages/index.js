@@ -398,7 +398,7 @@ export default function Home() {
             <nav className="nav">
               {['standings', 'league', 'predict'].map(p => (
                 <button key={p} className={`nav-btn ${page === p ? 'active' : ''}`} onClick={() => nav(p)}>
-                  {p === 'standings' ? 'EFL Table' : p === 'league' ? 'Prediction League' : 'My Picks'}
+                  {p === 'league' ? 'Prediction League' : p === 'standings' ? 'EFL Table' : 'My Picks'}
                 </button>
               ))}
             </nav>
