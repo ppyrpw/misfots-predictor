@@ -221,12 +221,6 @@ function PredictPage({ onNavigate }) {
   return (
     <>
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 500 }}>Prepare to Predict</h2>
-        <div style={{ display: 'flex', gap: 20, marginBottom: 20, flexWrap: 'wrap' }}>
-          <a href="https://theanalyst.com/competition/fifa-world-cup/predictions" target="_blank">Stats and Simulations →</a>
-          <a href="https://www.theguardian.com/sport/2022/dec/12/paul-the-octopus-taiyo-the-otter-world-cup-psychic-animals" target="_blank">Animal Inspiration →</a>
-        </div>
-
         <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
         <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>Pick a unique team for each position. {filled}/{required} filled.</p>
       </div>
@@ -390,7 +384,7 @@ export default function Home() {
     <>
       <Head>
         <title>EFL 26/27 Prediction Challenge</title>
-        <meta name="description" content="EFL 2026 prediction game" />
+        <meta name="description" content="EFL 2026/2027 prediction game" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <div className="app">
@@ -398,7 +392,7 @@ export default function Home() {
           <div>
             <div className="logo-title">⚽ EFL 26/27 Prediction Challenge</div>
             <div className="logo-sub">EFL · Premier League & Championship</div>
-            <div className="logo-sub">EPL: predict top 6 and bottom 3  EFL: predict top 2 and bottom 3</div>
+            <div className="logo-sub">PL: predict top 6 and bottom 3  CH: predict top 2 and bottom 3</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <nav className="nav">
