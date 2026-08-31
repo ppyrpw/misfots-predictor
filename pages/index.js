@@ -30,45 +30,43 @@ function StandingsPage() {
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 500 }}>Tournament standings</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>All 48 teams · Stage → record → GD → goals scored</p>
+          <h2 style={{ fontSize: 18, fontWeight: 500 }}>League standings</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>All 44 clubs · Position → record → GD → goals scored</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--green)', background: 'var(--green-bg)', padding: '3px 8px', borderRadius: 4 }}>● LIVE</span>
-          {updatedAt && <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>Updated {new Date(updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>}
+          {updatedAt && <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>Updated {new Date(updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}</span>}
         </div>
       </div>
       <div className="info-row">
-        <div className="info-card"><div className="ic-label">Teams</div><div className="ic-val">48</div><div className="ic-sub">Competing nations</div></div>
-        <div className="info-card"><div className="ic-label">Leader</div><div className="ic-val" style={{ fontSize: 15 }}>{leader ? `${leader.flag} ${leader.team_name}` : '—'}</div><div className="ic-sub">{leader?.stage || '—'}</div></div>
-        <div className="info-card"><div className="ic-label">Picks deadline</div><div className="ic-val" style={{ fontSize: 15 }}>{DEADLINE.toLocaleString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Chicago' })}</div><div className="ic-sub">{DEADLINE.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/Chicago' })}</div></div>
-          {/*<div className="info-card"><div className="ic-label">Auto-updates</div><div className="ic-val" style={{ fontSize: 15 }}>Daily</div><div className="ic-sub">at 9am UTC</div></div>*/}
+        <div className="info-card"><div className="ic-label">Leagues</div><div className="ic-val">2</div><div className="ic-sub">Premier & Championship</div></div>
+        <div className="info-card"><div className="ic-label">Leader</div><div className="ic-val" style={{ fontSize: 15 }}>{leader ? `${leader.team_name}` : '—'}</div><div className="ic-sub">{leader?.league || '—'}</div></div>
+        <div className="info-card"><div className="ic-label">Picks deadline</div><div className="ic-val" style={{ fontSize: 15 }}>{DEADLINE.toLocaleString('en-US', { month: 'short', day: 'numeric' })}</div><div className="ic-sub">1:00 PM Central</div></div>
+        <div className="info-card"><div className="ic-label">Updated every</div><div className="ic-val" style={{ fontSize: 15 }}>30m</div><div className="ic-sub">Auto via cron</div></div>
       </div>
+
       {loading ? <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading standings…</p> : (
         <div className="section-card">
           <table className="data-table">
             <thead><tr>
-              <th style={{ width: 40 }}>#</th><th>Team</th><th>Stage</th>
+              <th style={{ width: 40 }}>#</th><th>Club</th>
               <th style={{ textAlign: 'right' }}>W</th><th style={{ textAlign: 'right' }}>D</th><th style={{ textAlign: 'right' }}>L</th>
-              <th style={{ textAlign: 'right' }}>GF</th><th style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th>
+              <th style={{ textAlign: 'right' }}>GF</th><th style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th><th style={{ textAlign: 'right' }}>Pts</th>
             </tr></thead>
             <tbody>
               {ranked.map((t, i) => {
-                const isPred = i < 8 || i >= 44
-                const gd = t.goals_for - t.goals_against
+                const gd = (t.goals_for ?? 0) - (t.goals_against ?? 0)
                 return (
-                  <tr key={t.team_name}>
-                    <td style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>
-                      {isPred ? <span className="rank-hl">{i + 1}</span> : i + 1}
-                    </td>
-                    <td><span style={{ fontSize: 15, marginRight: 6 }}>{t.flag}</span><span style={{ fontWeight: 500 }}>{t.team_name}</span></td>
-                    <td><span className={`stage-badge ${stageClass(t.stage)}`}>{t.stage}</span></td>
-                    <td className="num-cell">{t.wins}</td>
-                    <td className="num-cell">{t.draws}</td>
-                    <td className="num-cell">{t.losses}</td>
-                    <td className="num-cell">{t.goals_for}</td>
-                    <td className="num-cell">{t.goals_against}</td>
-                    <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>            
+                  <tr key={`${t.league}-${t.team_name}`}>
+                    <td style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>{t.rank ?? i + 1}</td>
+                    <td style={{ fontWeight: 500 }}>{t.team_name}</td>
+                    <td className="num-cell">{t.wins ?? '—'}</td>
+                    <td className="num-cell">{t.draws ?? '—'}</td>
+                    <td className="num-cell">{t.losses ?? '—'}</td>
+                    <td className="num-cell">{t.goals_for ?? '—'}</td>
+                    <td className="num-cell">{t.goals_against ?? '—'}</td>
+                    <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>
+                    <td className="num-cell" style={{ fontWeight: 500 }}>{(t.wins ?? 0) * 3 + (t.draws ?? 0)}</td>
                   </tr>
                 )
               })}
@@ -76,7 +74,7 @@ function StandingsPage() {
           </table>
         </div>
       )}
-      <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)' }}>Highlighted ranks = prediction positions (1–8 and 45–48)</p>
+      <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)' }}>Highlighted ranks = prediction positions</p>
     </>
   )
 }
@@ -329,7 +327,7 @@ function ProfilePage({ onNavigate }) {
       </div>
       <div className="section-card" style={{ padding: '20px 24px', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 500 }}>{user.name[0]}</div>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 500 }}>[...]</div>
           <div><div style={{ fontWeight: 500, fontSize: 16 }}>{user.name}</div><div style={{ fontSize: 13, color: 'var(--text-2)' }}>{user.email}</div></div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
