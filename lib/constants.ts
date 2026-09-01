@@ -88,20 +88,51 @@ export type Standing = {
   league?: string
 }
 
+function compareStandings(a: Standing, b: Standing) {
+  const pa = (a.wins ?? 0) * 3 + (a.draws ?? 0)
+  const pb = (b.wins ?? 0) * 3 + (b.draws ?? 0)
+  if (pa !== pb) return pb - pa
+  const gda = (a.goals_for ?? 0) - (a.goals_against ?? 0)
+  const gdb = (b.goals_for ?? 0) - (b.goals_against ?? 0)
+  if (gda !== gdb) return gdb - gda
+  return (b.goals_for ?? 0) - (a.goals_for ?? 0)
+}
+
+function rankGroup(group: Standing[]): Standing[] {
+  const hasRanks = group.length > 0 && group.every(t => typeof t.rank === 'number')
+  if (hasRanks) return [...group].sort((a, b) => a.rank! - b.rank!)
+  return [...group].sort(compareStandings).map((t, i) => ({ ...t, rank: i + 1 }))
+}
+
+/** Rank each league separately so Championship 1st is not compared with Premier League 1st. */
 export function rankStandings(teams: Standing[]): Standing[] {
-  const hasRanks = teams.every(t => typeof t.rank === 'number')
-  if (hasRanks) {
-    return [...teams].sort((a, b) => (a.rank! - b.rank!))
+  const byLeague: Record<string, Standing[]> = {}
+  const ungrouped: Standing[] = []
+
+  for (const team of teams) {
+    if (team.league) {
+      byLeague[team.league] = byLeague[team.league] || []
+      byLeague[team.league].push(team)
+    } else {
+      ungrouped.push(team)
+    }
   }
-  return [...teams].sort((a, b) => {
-    const pa = (a.wins ?? 0) * 3 + (a.draws ?? 0)
-    const pb = (b.wins ?? 0) * 3 + (b.draws ?? 0)
-    if (pa !== pb) return pb - pa
-    const gda = (a.goals_for ?? 0) - (a.goals_against ?? 0)
-    const gdb = (b.goals_for ?? 0) - (b.goals_against ?? 0)
-    if (gda !== gdb) return gdb - gda
-    return (b.goals_for ?? 0) - (a.goals_for ?? 0)
-  })
+
+  const ranked = Object.keys(byLeague).sort().flatMap(league => rankGroup(byLeague[league]))
+  if (ungrouped.length === 0) return ranked
+  return ranked.concat(rankGroup(ungrouped))
+}
+
+function stripClubSuffix(name: string): string {
+  return name
+    .trim()
+    .replace(/\s+(?:a\.?f\.?c\.?|f\.?c\.?)\.?$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function teamLookupKey(name: string): string {
+  return stripClubSuffix(name).toLowerCase()
 }
 
 export function calcScore(picks: Record<string, string>, standings: Standing[]): { total: number; filled: number } {
@@ -110,30 +141,19 @@ export function calcScore(picks: Record<string, string>, standings: Standing[]):
 
   const leagueMaps: Record<string, Record<string, number>> = {}
   standings.forEach(s => {
-    if (!s.league || typeof s.rank !== 'number') return
+    if (!s.league || typeof s.rank !== 'number' || !s.team_name) return
     leagueMaps[s.league] = leagueMaps[s.league] || {}
-    leagueMaps[s.league][s.team_name] = s.rank!
+    leagueMaps[s.league][teamLookupKey(s.team_name)] = s.rank
   })
 
   PREDICTION_SLOTS.forEach(slot => {
     const pick = picks[slot.id]
     if (!pick) return
     filled++
-    const leagueMap = leagueMaps[slot.league] || {}
-    const actualRank = leagueMap[pick]
-    const [, posStr] = slot.id.split('-')
-    const pos = parseInt(posStr, 10)
-    if (actualRank === pos) {
-      total += 3
-    } else {
-      if (slot.league === 'PL') {
-        if ((pos >= 1 && pos <= 6) && actualRank && actualRank >= 1 && actualRank <= 6) total += 1
-        else if ((pos >= 18 && pos <= 20) && actualRank && actualRank >= 18 && actualRank <= 20) total += 1
-      } else if (slot.league === 'CH') {
-        if ((pos >= 1 && pos <= 2) && actualRank && actualRank >= 1 && actualRank <= 2) total += 1
-        else if ((pos >= 22 && pos <= 24) && actualRank && actualRank >= 22 && actualRank <= 24) total += 1
-      }
-    }
+    const actualRank = leagueMaps[slot.league]?.[teamLookupKey(pick)]
+    const predictedPos = parseInt(slot.id.split('-')[1], 10)
+    if (typeof actualRank !== 'number' || Number.isNaN(predictedPos)) return
+    total += Math.abs(predictedPos - actualRank)
   })
 
   return { total, filled }
@@ -154,27 +174,27 @@ const API_TEAM_NAME_MAP: Record<string, string> = {
 
 /**
  * normaliseTeamName
+ * - Drop trailing FC / AFC from the API name
  * - Try exact mapping from API_TEAM_NAME_MAP (lowercased)
- * - Then try exact case-insensitive match against club names in LEAGUES
- * - If nothing matches, return the API name unchanged (and optionally log it)
+ * - Then try case-insensitive match against club names in LEAGUES
+ * - If nothing matches, return the name without the club suffix
  */
 export function normaliseTeamName(apiName: string): string {
   if (!apiName) return apiName
-  const key = apiName.trim().toLowerCase()
+  const stripped = stripClubSuffix(apiName)
+  const candidates = [apiName.trim().toLowerCase(), stripped.toLowerCase()]
 
-  // 1) explicit mappings
-  if (API_TEAM_NAME_MAP[key]) return API_TEAM_NAME_MAP[key]
+  for (const key of candidates) {
+    if (API_TEAM_NAME_MAP[key]) return API_TEAM_NAME_MAP[key]
+  }
 
-  // 2) try match against known league names
   for (const leagueKey of Object.keys(LEAGUES)) {
     const teams = LEAGUES[leagueKey].teams || []
     for (const t of teams) {
-      if (t.name && t.name.trim().toLowerCase() === key) return t.name
+      if (t.name && teamLookupKey(t.name) === teamLookupKey(stripped)) return t.name
     }
   }
 
-  // 3) Not found — log so we can add to API_TEAM_NAME_MAP later
-  // (cron runs on server — these warnings will show in logs)
   console.warn(`normaliseTeamName: no mapping found for API name "${apiName}"`)
-  return apiName
+  return stripped
 }

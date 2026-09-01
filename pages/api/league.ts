@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const [usersRes, predsRes, standingsRes] = await Promise.all([
     supabaseAdmin.from('users').select('id, name, email'),
     supabaseAdmin.from('predictions').select('user_id, picks'),
-    supabaseAdmin.from('standings').select('team_name, flag, league, wins, draws, losses, goals_for, goals_against'),
+    supabaseAdmin.from('standings').select('team_name, flag, league, rank, wins, draws, losses, goals_for, goals_against'),
   ])
 
   const users = usersRes.data ?? []
