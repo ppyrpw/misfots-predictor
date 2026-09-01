@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import { useEffect, useState } from 'react'
 import { useAuth } from './_app'
-import { TEAMS, LEAGUES, PREDICTION_SLOTS, rankStandings, calcScore } from '../lib/constants'
+import { TEAMS, LEAGUES, PREDICTION_SLOTS, rankStandings, calcScore, pickScore, slotNumber } from '../lib/constants'
 
 const DEADLINE = new Date(process.env.NEXT_PUBLIC_DEADLINE || '2026-06-18T18:00:00.000Z')
 const sortedTeams = [...TEAMS].sort((a, b) => a.name.localeCompare(b.name))
@@ -127,7 +127,10 @@ function LeaguePage({ onNavigate }) {
             <table className="data-table">
               <thead><tr>
                 <th style={{ width: 36 }}>Pos</th><th>Participant</th><th>Email</th>
-                <th style={{ textAlign: 'right' }}>Picks</th><th style={{ textAlign: 'right' }}>Score</th>
+                <th style={{ textAlign: 'right' }}>Picks</th>
+                <th style={{ textAlign: 'right' }}>PL</th>
+                <th style={{ textAlign: 'right' }}>CH</th>
+                <th style={{ textAlign: 'right' }}>Score</th>
               </tr></thead>
               <tbody>
                 {table.map((row, i) => (
@@ -138,6 +141,8 @@ function LeaguePage({ onNavigate }) {
                     <td style={{ fontWeight: 500 }}>{row.name}{user?.email === row.email && <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>(you)</span>}</td>
                     <td style={{ color: 'var(--text-2)', fontSize: 13 }}>{row.email}</td>
                     <td className="num-cell">{row.filled}/{required}</td>
+                    <td className="num-cell">{row.pl ?? 0}</td>
+                    <td className="num-cell">{row.ch ?? 0}</td>
                     <td className="num-cell"><span className="score-pill">{row.score} pts</span></td>
                   </tr>
                 ))}
@@ -146,20 +151,36 @@ function LeaguePage({ onNavigate }) {
           </div>
         )}
       <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)', marginTop: 12 }}>
-        Score = Σ |predicted rank − actual rank| across your {required} picks. Lower is better.
+        Score = PL + CH. Each league is Σ |predicted rank − actual rank|. Lower is better.
       </p>
     </>
   )
 }
 
+function ordinal(n) {
+  const v = n % 100
+  const suff = v >= 11 && v <= 13 ? 'th' : (n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th')
+  return `${n}${suff}`
+}
+
+function isRelegationSlot(slot) {
+  const n = slotNumber(slot.id)
+  return slot.league === 'PL' ? n >= 18 : n >= 22
+}
+
 function PredictPage({ onNavigate }) {
   const { user } = useAuth()
   const [picks, setPicks] = useState({})
+  const [standings, setStandings] = useState([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [loadingPicks, setLoadingPicks] = useState(true)
   const past = new Date() > DEADLINE
   const deadlineDisplay = DEADLINE.toLocaleString('en-US', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/Chicago' })
+
+  useEffect(() => {
+    fetch('/api/standings').then(r => r.json()).then(d => setStandings(d.standings || []))
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -193,27 +214,34 @@ function PredictPage({ onNavigate }) {
 
   if (loadingPicks) return <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading your picks…</p>
 
-  // Separate slots by league and tier
-  const plTopSlots = PREDICTION_SLOTS.filter(s => s.league === 'PL' && s.id.match(/PL-[1-6]$/))
-  const plBotSlots = PREDICTION_SLOTS.filter(s => s.league === 'PL' && s.id.match(/PL-(18|19|20)$/))
-  const chTopSlots = PREDICTION_SLOTS.filter(s => s.league === 'CH' && s.id.match(/CH-[1-2]$/))
-  const chBotSlots = PREDICTION_SLOTS.filter(s => s.league === 'CH' && s.id.match(/CH-(22|23|24)$/))
-  
+  const ranked = rankStandings(standings)
+  const { total, pl, ch } = calcScore(picks, ranked)
+  const plSlots = PREDICTION_SLOTS.filter(s => s.league === 'PL').sort((a, b) => slotNumber(a.id) - slotNumber(b.id))
+  const chSlots = PREDICTION_SLOTS.filter(s => s.league === 'CH').sort((a, b) => slotNumber(a.id) - slotNumber(b.id))
   const filled = PREDICTION_SLOTS.filter(p => picks[p.id]).length
   const required = PREDICTION_SLOTS.length
 
-  const SlotSelect = ({ slot }) => {
+  const SlotRow = ({ slot }) => {
     const val = picks[slot.id] || ''
     const usedElsewhere = new Set(Object.entries(picks).filter(([k]) => k !== slot.id).map(([, v]) => v))
-    // Scope teams to this slot's league only
     const leagueTeams = (LEAGUES[slot.league]?.teams || []).sort((a, b) => a.name.localeCompare(b.name))
+    const pts = pickScore(slot.id, val, ranked)
+    const pos = slotNumber(slot.id)
     return (
-      <div className="pred-slot">
-        <div className="pred-slot-label">{slot.label}</div>
+      <div className="pred-row">
+        <div className="pred-row-pos">
+          {ordinal(pos)}
+          {isRelegationSlot(slot) && <span>Relegation</span>}
+        </div>
         <select className="pred-select" value={val} disabled={past} onChange={e => handleChange(slot.id, e.target.value)}>
           <option value="">— Select team —</option>
           {leagueTeams.map(t => <option key={t.name} value={t.name} disabled={usedElsewhere.has(t.name) && t.name !== val}>{t.flag} {t.name}</option>)}
         </select>
+        <div className="pred-row-score">
+          {val
+            ? <span className="score-pill">{pts === null ? '—' : `${pts} pts`}</span>
+            : <span className="score-pill muted">—</span>}
+        </div>
       </div>
     )
   }
@@ -222,33 +250,30 @@ function PredictPage({ onNavigate }) {
     <>
       <div style={{ marginBottom: 20 }}>
         <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
-        <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>Pick a unique team for each position. {filled}/{required} filled.</p>
+        <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>
+          One unique team per position. {filled}/{required} filled
+          {filled > 0 && <> · {total} pts total (PL {pl} + CH {ch})</>}
+        </p>
       </div>
       
       {past
         ? <div className="banner banner-red">🔒 Predictions are locked. Deadline was {deadlineDisplay}.</div>
         : <div className="banner banner-amber">⏰ Predictions lock on <strong>{deadlineDisplay}</strong>. You can update any time before then.</div>}
-      
-      {/* Premier League */}
+
       <div className="pred-section">
-        <div className="pred-section-title">Premier League — Top 6</div>
-        <div className="pred-grid">{plTopSlots.map(s => <SlotSelect key={s.id} slot={s} />)}</div>
-      </div>
-      
-      <div className="pred-section">
-        <div className="pred-section-title">Premier League — Bottom 3 (Relegation)</div>
-        <div className="pred-grid">{plBotSlots.map(s => <SlotSelect key={s.id} slot={s} />)}</div>
+        <div className="pred-section-title">
+          <span>Premier League</span>
+          <span className="pred-section-pts">{pl} pts</span>
+        </div>
+        <div className="pred-list">{plSlots.map(s => <SlotRow key={s.id} slot={s} />)}</div>
       </div>
 
-      {/* Championship */}
       <div className="pred-section">
-        <div className="pred-section-title">Championship — Top 2</div>
-        <div className="pred-grid">{chTopSlots.map(s => <SlotSelect key={s.id} slot={s} />)}</div>
-      </div>
-      
-      <div className="pred-section">
-        <div className="pred-section-title">Championship — Bottom 3 (Relegation)</div>
-        <div className="pred-grid">{chBotSlots.map(s => <SlotSelect key={s.id} slot={s} />)}</div>
+        <div className="pred-section-title">
+          <span>Championship</span>
+          <span className="pred-section-pts">{ch} pts</span>
+        </div>
+        <div className="pred-list">{chSlots.map(s => <SlotRow key={s.id} slot={s} />)}</div>
       </div>
 
       {!past && (
@@ -344,13 +369,13 @@ function ProfilePage({ onNavigate }) {
       const table = d.table || []
       const myRow = table.find(r => r.email === user.email)
       const myRank = table.findIndex(r => r.email === user.email) + 1
-      if (myRow) setStats({ score: myRow.score, filled: myRow.filled, rank: myRank, total: table.length })
+      if (myRow) setStats({ score: myRow.score, pl: myRow.pl ?? 0, ch: myRow.ch ?? 0, filled: myRow.filled, rank: myRank, total: table.length })
     })
   }, [user])
 
   if (!user) return <div className="empty-state"><h3>Not signed in</h3></div>
 
-  const doLogout = async () => { await logout(); onNavigate('standings') }
+  const doLogout = async () => { await logout(); onNavigate('league') }
   const required = PREDICTION_SLOTS.length
 
   return (
@@ -364,9 +389,11 @@ function ProfilePage({ onNavigate }) {
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 500 }}>{user.name.charAt(0)}</div>
           <div><div style={{ fontWeight: 500, fontSize: 16 }}>{user.name}</div><div style={{ fontSize: 13, color: 'var(--text-2)' }}>{user.email}</div></div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(88px, 1fr))', gap: 12 }}>
           <div className="info-card"><div className="ic-label">Rank</div><div className="ic-val">{stats ? stats.rank : '—'}</div><div className="ic-sub">of {stats?.total || '—'}</div></div>
-          <div className="info-card"><div className="ic-label">Score</div><div className="ic-val">{stats ? stats.score : '—'}</div><div className="ic-sub">total pts</div></div>
+          <div className="info-card"><div className="ic-label">Score</div><div className="ic-val">{stats ? stats.score : '—'}</div><div className="ic-sub">PL + CH</div></div>
+          <div className="info-card"><div className="ic-label">PL</div><div className="ic-val">{stats ? stats.pl : '—'}</div><div className="ic-sub">pts</div></div>
+          <div className="info-card"><div className="ic-label">CH</div><div className="ic-val">{stats ? stats.ch : '—'}</div><div className="ic-sub">pts</div></div>
           <div className="info-card"><div className="ic-label">Picks</div><div className="ic-val">{stats ? `${stats.filled}/${required}` : '—'}</div><div className="ic-sub">completed</div></div>
         </div>
       </div>
@@ -377,7 +404,7 @@ function ProfilePage({ onNavigate }) {
 
 export default function Home() {
   const { user, loading } = useAuth()
-  const [page, setPage] = useState('standings')
+  const [page, setPage] = useState('league')
   const nav = (p) => setPage(p)
 
   return (
@@ -396,7 +423,7 @@ export default function Home() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <nav className="nav">
-              {['standings', 'league', 'predict'].map(p => (
+              {['league', 'standings', 'predict'].map(p => (
                 <button key={p} className={`nav-btn ${page === p ? 'active' : ''}`} onClick={() => nav(p)}>
                   {p === 'league' ? 'Prediction League' : p === 'standings' ? 'EFL Table' : 'My Picks'}
                 </button>

@@ -21,8 +21,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const table = users
     .map(u => {
       const picks = predMap[u.id] ?? {}
-      const { total, filled } = calcScore(picks, ranked)
-      return { name: u.name, email: u.email, score: total, filled }
+      const { total, pl, ch, filled } = calcScore(picks, ranked)
+      return { name: u.name, email: u.email, score: total, pl, ch, filled }
     })
     .sort((a, b) => a.score - b.score)
 
