@@ -123,6 +123,10 @@ export function rankStandings(teams: Standing[]): Standing[] {
   return ranked.concat(rankGroup(ungrouped))
 }
 
+export function slotNumber(slotId: string): number {
+  return parseInt(slotId.split('-')[1], 10)
+}
+
 function stripClubSuffix(name: string): string {
   return name
     .trim()
@@ -135,28 +139,46 @@ function teamLookupKey(name: string): string {
   return stripClubSuffix(name).toLowerCase()
 }
 
-export function calcScore(picks: Record<string, string>, standings: Standing[]): { total: number; filled: number } {
-  let total = 0
-  let filled = 0
-
+function leagueRankMaps(standings: Standing[]): Record<string, Record<string, number>> {
   const leagueMaps: Record<string, Record<string, number>> = {}
   standings.forEach(s => {
     if (!s.league || typeof s.rank !== 'number' || !s.team_name) return
     leagueMaps[s.league] = leagueMaps[s.league] || {}
     leagueMaps[s.league][teamLookupKey(s.team_name)] = s.rank
   })
+  return leagueMaps
+}
+
+/** Points for one pick: |predicted slot − actual rank| in that league. Null if no pick or no standing. */
+export function pickScore(slotId: string, teamName: string | undefined, standings: Standing[]): number | null {
+  if (!teamName) return null
+  const slot = PREDICTION_SLOTS.find(s => s.id === slotId)
+  if (!slot) return null
+  const predictedPos = slotNumber(slotId)
+  const actualRank = leagueRankMaps(standings)[slot.league]?.[teamLookupKey(teamName)]
+  if (typeof actualRank !== 'number' || Number.isNaN(predictedPos)) return null
+  return Math.abs(predictedPos - actualRank)
+}
+
+export function calcScore(picks: Record<string, string>, standings: Standing[]): { total: number; pl: number; ch: number; filled: number } {
+  let pl = 0
+  let ch = 0
+  let filled = 0
+  const maps = leagueRankMaps(standings)
 
   PREDICTION_SLOTS.forEach(slot => {
     const pick = picks[slot.id]
     if (!pick) return
     filled++
-    const actualRank = leagueMaps[slot.league]?.[teamLookupKey(pick)]
-    const predictedPos = parseInt(slot.id.split('-')[1], 10)
+    const actualRank = maps[slot.league]?.[teamLookupKey(pick)]
+    const predictedPos = slotNumber(slot.id)
     if (typeof actualRank !== 'number' || Number.isNaN(predictedPos)) return
-    total += Math.abs(predictedPos - actualRank)
+    const pts = Math.abs(predictedPos - actualRank)
+    if (slot.league === 'PL') pl += pts
+    else if (slot.league === 'CH') ch += pts
   })
 
-  return { total, filled }
+  return { total: pl + ch, pl, ch, filled }
 }
 
 // API → canonical name map for common variants
