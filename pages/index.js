@@ -75,9 +75,9 @@ function StandingsPage() {
       </div>
       <div className="info-row">
         <div className="info-card"><div className="ic-label">Leagues</div><div className="ic-val">2</div><div className="ic-sub">Premier & Championship</div></div>
-        <div className="info-card"><div className="ic-label">Leader</div><div className="ic-val" style={{ fontSize: 15 }}>{leader ? `${leader.team_name}` : '—'}</div><div className="ic-sub">{leader?.league || '—'}</div></div>
+        /*<div className="info-card"><div className="ic-label">Leader</div><div className="ic-val" style={{ fontSize: 15 }}>{leader ? `${leader.team_name}` : '—'}</div><div className="ic-sub">{leader?.league || '—'}</div></div>*/
         <div className="info-card"><div className="ic-label">Picks deadline</div><div className="ic-val" style={{ fontSize: 15 }}>{DEADLINE.toLocaleString('en-US', { month: 'short', day: 'numeric' })}</div><div className="ic-sub">1:00 PM Central</div></div>
-        <div className="info-card"><div className="ic-label">Updated every</div><div className="ic-val" style={{ fontSize: 15 }}>30m</div><div className="ic-sub">Auto via cron</div></div>
+        <div className="info-card"><div className="ic-label">Updated every</div><div className="ic-val" style={{ fontSize: 15 }}>Daily at 9am</div><div className="ic-sub">Auto via cron</div></div>
       </div>
 
       {loading ? (
