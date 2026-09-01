@@ -4,5 +4,10 @@
       "path": "/api/cron/update-standings",
       "schedule": "0 9 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "pages/api/cron/update-standings.ts": {
+      "maxDuration": 60
+    }
+  }
 }
