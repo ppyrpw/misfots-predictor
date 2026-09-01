@@ -9,6 +9,136 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { normaliseTeamName } from '@/lib/constants'
 
+export const config = {
+  maxDuration: 60,
+}
+
+const FETCH_TIMEOUT_MS = 12_000
+const MAX_ATTEMPTS = 3
+const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504])
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function backoffMs(attempt: number, retryAfterHeader?: string | null) {
+  const retryAfterSec = retryAfterHeader ? Number(retryAfterHeader) : NaN
+  if (Number.isFinite(retryAfterSec) && retryAfterSec > 0) {
+    return Math.min(retryAfterSec * 1000, 15_000)
+  }
+  return Math.min(500 * 2 ** (attempt - 1), 4_000)
+}
+
+function isRetryableError(err: unknown) {
+  const name = err instanceof Error ? err.name : ''
+  const message = err instanceof Error ? err.message : String(err)
+  return (
+    name === 'AbortError' ||
+    name === 'TimeoutError' ||
+    /fetch failed|network|econnreset|etimedout|socket|undici/i.test(message)
+  )
+}
+
+async function fetchWithRetry(url: string, init: RequestInit, logCtx: Record<string, unknown>) {
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+    const started = Date.now()
+
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal, cache: 'no-store' })
+      const durationMs = Date.now() - started
+      const retryAfter = res.headers.get('retry-after')
+
+      console.log(
+        JSON.stringify({
+          source: 'cron/update-standings',
+          event: 'external_fetch',
+          ...logCtx,
+          attempt,
+          status: res.status,
+          statusText: res.statusText,
+          ok: res.ok,
+          durationMs,
+          retryAfter,
+        })
+      )
+
+      if (res.ok) return res
+
+      const bodyPreview = (await res.text()).slice(0, 300)
+      console.warn(
+        JSON.stringify({
+          source: 'cron/update-standings',
+          event: 'external_fetch_error_body',
+          ...logCtx,
+          attempt,
+          status: res.status,
+          bodyPreview,
+        })
+      )
+
+      const shouldRetry = attempt < MAX_ATTEMPTS && RETRYABLE_STATUS.has(res.status)
+      if (!shouldRetry) {
+        throw new Error(`Football-Data.org error: ${res.status} ${res.statusText}`)
+      }
+
+      await sleep(backoffMs(attempt, retryAfter))
+    } catch (err) {
+      const durationMs = Date.now() - started
+      lastError = err
+      const aborted = err instanceof Error && err.name === 'AbortError'
+
+      console.error(
+        JSON.stringify({
+          source: 'cron/update-standings',
+          event: aborted ? 'external_fetch_timeout' : 'external_fetch_exception',
+          ...logCtx,
+          attempt,
+          durationMs,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      )
+
+      if (attempt >= MAX_ATTEMPTS || !isRetryableError(err)) throw err
+      await sleep(backoffMs(attempt))
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Football-Data.org request failed')
+}
+
+function isCronAuthorized(req: NextApiRequest) {
+  const secret = process.env.CRON_SECRET
+  if (!secret) {
+    if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production') {
+      console.error(
+        JSON.stringify({
+          source: 'cron/update-standings',
+          event: 'auth_misconfigured',
+          error: 'CRON_SECRET is not set',
+        })
+      )
+      return false
+    }
+    return true
+  }
+
+  const authorization = req.headers.authorization
+  if (authorization === `Bearer ${secret}`) return true
+
+  const headerSecret = req.headers['x-vercel-cron-secret']
+  if (typeof headerSecret === 'string' && headerSecret === secret) return true
+
+  const querySecret = req.query.secret
+  const fromQuery = Array.isArray(querySecret) ? querySecret[0] : querySecret
+  return fromQuery === secret
+}
+
 /**
  * DEPRECATED: Old API-Football fixture-based approach
  * Kept for reference only. Use fetchStandingsForLeague instead.
@@ -33,15 +163,37 @@ async function fetchFixturesForLeague(leagueId: string | undefined, season: stri
  * Returns the standings object which already contains computed table
  */
 async function fetchStandingsForLeague(leagueId: string | undefined, season: string) {
-  if (!leagueId) return []
+  if (!leagueId) {
+    console.warn(
+      JSON.stringify({
+        source: 'cron/update-standings',
+        event: 'skip_league',
+        reason: 'missing_league_id',
+        season,
+      })
+    )
+    return []
+  }
   const apiKey = process.env.FOOTBALL_DATA_API_KEY
   if (!apiKey) throw new Error('FOOTBALL_DATA_API_KEY not set')
-  const res = await fetch(`https://api.football-data.org/v4/competitions/${leagueId}/standings?season=${season}`, {
-    headers: { 'X-Auth-Token': apiKey }
-  })
-  if (!res.ok) throw new Error(`Football-Data.org error: ${res.status}`)
+  const url = `https://api.football-data.org/v4/competitions/${leagueId}/standings?season=${season}`
+  const res = await fetchWithRetry(
+    url,
+    { headers: { 'X-Auth-Token': apiKey } },
+    { leagueId, season, host: 'api.football-data.org' }
+  )
   const json = await res.json()
-  return json.standings ?? []
+  const standings = json.standings ?? []
+  console.log(
+    JSON.stringify({
+      source: 'cron/update-standings',
+      event: 'standings_parsed',
+      leagueId,
+      season,
+      standingGroups: Array.isArray(standings) ? standings.length : 0,
+    })
+  )
+  return standings
 }
 
 /**
@@ -122,13 +274,22 @@ async function parseLeagueStandingsFromAPI(standingsData: any[]) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Security: Vercel Cron sets this header automatically; manual calls need the secret query param
-  const cronSecret = req.headers['x-vercel-cron-secret'] || req.query.secret
-  if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+  // Vercel Cron sends Authorization: Bearer <CRON_SECRET>.
+  // Manual runs can still use ?secret= or x-vercel-cron-secret.
+  if (!isCronAuthorized(req)) {
+    console.warn(
+      JSON.stringify({
+        source: 'cron/update-standings',
+        event: 'unauthorized',
+        hasAuthHeader: Boolean(req.headers.authorization),
+        hasQuerySecret: Boolean(req.query.secret),
+      })
+    )
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
   const season = process.env.SEASON || '2026'
+  const started = Date.now()
   try {
     const plStandings = await fetchStandingsForLeague(process.env.PL_LEAGUE_ID, season)
     const chStandings = await fetchStandingsForLeague(process.env.CH_LEAGUE_ID, season)
@@ -141,15 +302,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     plTable.forEach(r => upserts.push({ league: 'PL', team_name: r.team_name, wins: r.wins, draws: r.draws, losses: r.losses, goals_for: r.goals_for, goals_against: r.goals_against, rank: r.rank }))
     chTable.forEach(r => upserts.push({ league: 'CH', team_name: r.team_name, wins: r.wins, draws: r.draws, losses: r.losses, goals_for: r.goals_for, goals_against: r.goals_against, rank: r.rank }))
 
-    // Clear existing standings for these leagues then insert
-    await supabaseAdmin.from('standings').delete().in('league', ['PL', 'CH'])
-    for (const row of upserts) {
-      await supabaseAdmin.from('standings').insert(row)
+    const { error: deleteError } = await supabaseAdmin.from('standings').delete().in('league', ['PL', 'CH'])
+    if (deleteError) throw deleteError
+
+    if (upserts.length > 0) {
+      const { error: insertError } = await supabaseAdmin.from('standings').insert(upserts)
+      if (insertError) throw insertError
     }
+
+    console.log(
+      JSON.stringify({
+        source: 'cron/update-standings',
+        event: 'success',
+        teamsUpdated: upserts.length,
+        plTeams: plTable.length,
+        chTeams: chTable.length,
+        durationMs: Date.now() - started,
+      })
+    )
 
     return res.status(200).json({ ok: true, teamsUpdated: upserts.length })
   } catch (err: any) {
-    console.error(err)
+    console.error(
+      JSON.stringify({
+        source: 'cron/update-standings',
+        event: 'handler_error',
+        durationMs: Date.now() - started,
+        error: err?.message || String(err),
+      })
+    )
     return res.status(500).json({ error: err.message || String(err) })
   }
 }
