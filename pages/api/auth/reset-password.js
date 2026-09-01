@@ -18,7 +18,7 @@ async function sendResetEmail(email, name, newPassword) {
       'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM || 'Mystic Misfots <noreply@yourdomain.com>',
+      from: process.env.EMAIL_FROM || 'Mystic Misfots <noreply@misfots.pro>',
       to: email,
       subject: 'Your new Mystic Misfots password',
       html: `
