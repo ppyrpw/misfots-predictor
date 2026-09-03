@@ -65,8 +65,7 @@ function StandingsPage() {
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 500 }}>League standings</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>All 44 clubs · Position → record → GD → goals scored</p>
+          <h2 style={{ fontSize: 18, fontWeight: 500 }}>EFL standings - PL & CH</h2>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--green)', background: 'var(--green-bg)', padding: '3px 8px', borderRadius: 4 }}>● LIVE</span>
@@ -74,10 +73,7 @@ function StandingsPage() {
         </div>
       </div>
       <div className="info-row">
-        <div className="info-card"><div className="ic-label">Leagues</div><div className="ic-val">2</div><div className="ic-sub">Premier & Championship</div></div>
-        <div className="info-card"><div className="ic-label">Leader</div><div className="ic-val" style={{ fontSize: 15 }}>{leader ? `${leader.team_name}` : '—'}</div><div className="ic-sub">{leader?.league || '—'}</div></div>
         <div className="info-card"><div className="ic-label">Picks deadline</div><div className="ic-val" style={{ fontSize: 15 }}>{DEADLINE.toLocaleString('en-US', { month: 'short', day: 'numeric' })}</div><div className="ic-sub">1:00 PM Central</div></div>
-        <div className="info-card"><div className="ic-label">Updated every</div><div className="ic-val" style={{ fontSize: 15 }}>30m</div><div className="ic-sub">Auto via cron</div></div>
       </div>
 
       {loading ? (
@@ -109,7 +105,10 @@ function LeaguePage({ onNavigate }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 500 }}>Prediction league</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>Lowest total points deviation wins · Perfect pick = 0 pts</p>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>Lowest total points deviation wins · Perfect pick = 0 pts · Total Score = PL + CH. Each league is Σ predicted rank − actual rank|.</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)', marginTop: 12 }}>
+        
+      </p>
         </div>
         {user ? <button className="btn-secondary" onClick={() => onNavigate('predict')}>Edit my picks →</button>
           : <button className="btn-secondary" onClick={() => onNavigate('auth')}>Join to predict →</button>}
@@ -150,9 +149,6 @@ function LeaguePage({ onNavigate }) {
             </table>
           </div>
         )}
-      <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)', marginTop: 12 }}>
-        Score = PL + CH. Each league is Σ |predicted rank − actual rank|. Lower is better.
-      </p>
     </>
   )
 }
