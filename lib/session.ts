@@ -26,7 +26,7 @@ function verify(token: string): SessionUser | null {
 export function setSession(res: NextApiResponse, user: SessionUser) {
   const token = sign(user)
   res.setHeader('Set-Cookie',
-    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${60 * 60 * 24 * 30}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`
+    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${60 * 60 * 24 * 90}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`
   )
 }
 
