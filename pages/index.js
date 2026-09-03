@@ -272,7 +272,7 @@ function PredictPage({ onNavigate }) {
     const pts = pickScore(slot.id, val, ranked)
     const pos = slotNumber(slot.id)
     return (
-      <div className="pred-row">
+      <div className={`pred-row${past ? '' : ' pred-row-no-score'}`}>
         <div className="pred-row-pos">
           {ordinal(pos)}
           {isRelegationSlot(slot) && <span>Relegation</span>}
@@ -281,11 +281,13 @@ function PredictPage({ onNavigate }) {
           <option value="">— Select team —</option>
           {leagueTeams.map(t => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
         </select>
-        <div className="pred-row-score">
-          {val
-            ? <span className="score-pill">{pts === null ? '—' : `${pts} pts`}</span>
-            : <span className="score-pill muted">—</span>}
-        </div>
+        {past && (
+          <div className="pred-row-score">
+            {val
+              ? <span className="score-pill">{pts === null ? '—' : `${pts} pts`}</span>
+              : <span className="score-pill muted">—</span>}
+          </div>
+        )}
       </div>
     )
   }
@@ -296,7 +298,7 @@ function PredictPage({ onNavigate }) {
         <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
         <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>
           One unique team per position. {filled}/{required} filled
-          {filled > 0 && <> · {total} pts total (PL {pl} + CH {ch})</>}
+          {past && filled > 0 && <> · {total} pts total (PL {pl} + CH {ch})</>}
         </p>
       </div>
       
@@ -307,7 +309,7 @@ function PredictPage({ onNavigate }) {
       <div className="pred-section">
         <div className="pred-section-title">
           <span> Premier League</span>
-          <span className="pred-section-pts">{pl} pts</span>
+          {past && <span className="pred-section-pts">{pl} pts</span>}
         </div>
         <div className="pred-list">{plSlots.map(s => <SlotRow key={s.id} slot={s} />)}</div>
       </div>
@@ -315,7 +317,7 @@ function PredictPage({ onNavigate }) {
       <div className="pred-section">
         <div className="pred-section-title">
           <span> Championship</span>
-          <span className="pred-section-pts">{ch} pts</span>
+          {past && <span className="pred-section-pts">{ch} pts</span>}
         </div>
         <div className="pred-list">{chSlots.map(s => <SlotRow key={s.id} slot={s} />)}</div>
       </div>
