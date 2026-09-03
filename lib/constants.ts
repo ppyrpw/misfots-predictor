@@ -191,6 +191,7 @@ const API_TEAM_NAME_MAP: Record<string, string> = {
   'wolves': 'Wolverhampton Wanderers',
   'nottingham forest fc': 'Nottingham Forest',
   'qpr': 'Queens Park Rangers',
+  'afc bournemouth' : 'Bournemouth'
   // add more as you see them in logs
 }
 
