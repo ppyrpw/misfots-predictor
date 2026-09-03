@@ -45,36 +45,38 @@ function StandingsPage() {
   const renderStandingsTable = (teams, leagueName) => (
     <div className="section-card" style={{ marginBottom: 24 }}>
       <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>{leagueName}</h3>
-      <table className="data-table">
-        <thead><tr>
-          <th style={{ width: 40 }}>#</th><th>Club</th>
-          <th style={{ textAlign: 'right' }}>W</th><th style={{ textAlign: 'right' }}>D</th><th style={{ textAlign: 'right' }}>L</th>
-          <th style={{ textAlign: 'right' }}>GF</th><th style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th><th style={{ textAlign: 'right' }}>Pts</th>
-          <th style={{ textAlign: 'right', color: 'var(--amber)', background: 'var(--amber-bg)', borderLeft: '1px solid #fcd34d' }}>Predicted</th>
-        </tr></thead>
-        <tbody>
-          {teams.map((t, i) => {
-            const gd = (t.goals_for ?? 0) - (t.goals_against ?? 0)
-            const predictedPosition = predictedByTeam[t.team_name]
-            return (
-              <tr key={`${t.league}-${t.team_name}`} style={{ background: predictedPosition ? 'var(--amber-bg)' : undefined }}>
-                <td style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>{t.rank ?? i + 1}</td>
-                <td style={{ fontWeight: 500 }}>{t.team_name}</td>
-                <td className="num-cell">{t.wins ?? '—'}</td>
-                <td className="num-cell">{t.draws ?? '—'}</td>
-                <td className="num-cell">{t.losses ?? '—'}</td>
-                <td className="num-cell">{t.goals_for ?? '—'}</td>
-                <td className="num-cell">{t.goals_against ?? '—'}</td>
-                <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>
-                <td className="num-cell" style={{ fontWeight: 500 }}>{(t.wins ?? 0) * 3 + (t.draws ?? 0)}</td>
-                <td className="num-cell" style={{ fontWeight: predictedPosition ? 600 : 400, color: predictedPosition ? 'var(--amber)' : 'var(--text-3)', background: 'var(--amber-bg)', borderLeft: '1px solid #fcd34d' }}>
-                  {predictedPosition ? ordinal(predictedPosition) : '—'}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+      <div className="table-scroll">
+        <table className="data-table standings-table">
+          <thead><tr>
+            <th style={{ width: 40 }}>#</th><th>Club</th>
+            <th className="mobile-optional" style={{ textAlign: 'right' }}>W</th><th className="mobile-optional" style={{ textAlign: 'right' }}>D</th><th className="mobile-optional" style={{ textAlign: 'right' }}>L</th>
+            <th className="mobile-optional" style={{ textAlign: 'right' }}>GF</th><th className="mobile-optional" style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th><th style={{ textAlign: 'right' }}>Pts</th>
+            <th style={{ textAlign: 'right', color: 'var(--amber)', background: 'var(--amber-bg)', borderLeft: '1px solid #fcd34d' }}>Predicted</th>
+          </tr></thead>
+          <tbody>
+            {teams.map((t, i) => {
+              const gd = (t.goals_for ?? 0) - (t.goals_against ?? 0)
+              const predictedPosition = predictedByTeam[t.team_name]
+              return (
+                <tr key={`${t.league}-${t.team_name}`} style={{ background: predictedPosition ? 'var(--amber-bg)' : undefined }}>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>{t.rank ?? i + 1}</td>
+                  <td style={{ fontWeight: 500 }}>{t.team_name}</td>
+                  <td className="num-cell mobile-optional">{t.wins ?? '—'}</td>
+                  <td className="num-cell mobile-optional">{t.draws ?? '—'}</td>
+                  <td className="num-cell mobile-optional">{t.losses ?? '—'}</td>
+                  <td className="num-cell mobile-optional">{t.goals_for ?? '—'}</td>
+                  <td className="num-cell mobile-optional">{t.goals_against ?? '—'}</td>
+                  <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>
+                  <td className="num-cell" style={{ fontWeight: 500 }}>{(t.wins ?? 0) * 3 + (t.draws ?? 0)}</td>
+                  <td className="num-cell" style={{ fontWeight: predictedPosition ? 600 : 400, color: predictedPosition ? 'var(--amber)' : 'var(--text-3)', background: 'var(--amber-bg)', borderLeft: '1px solid #fcd34d' }}>
+                    {predictedPosition ? ordinal(predictedPosition) : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 
@@ -145,7 +147,7 @@ function LeaguePage({ onNavigate }) {
           <div className="section-card">
             <table className="data-table">
               <thead><tr>
-                <th style={{ width: 36 }}>Pos</th><th>Participant</th><th>Email</th>
+                <th style={{ width: 36 }}>Pos</th><th>Participant</th>
                 <th style={{ textAlign: 'right' }}>Picks</th>
                 <th style={{ textAlign: 'right' }}>PL</th>
                 <th style={{ textAlign: 'right' }}>CH</th>
@@ -158,7 +160,6 @@ function LeaguePage({ onNavigate }) {
                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                     </td>
                     <td style={{ fontWeight: 500 }}>{row.name}{user?.email === row.email && <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>(you)</span>}</td>
-                    <td style={{ color: 'var(--text-2)', fontSize: 13 }}>{row.email}</td>
                     <td className="num-cell">{row.filled}/{required}</td>
                     <td className="num-cell">{row.pl ?? 0}</td>
                     <td className="num-cell">{row.ch ?? 0}</td>
@@ -204,20 +205,48 @@ function PredictPage({ onNavigate }) {
   }, [user])
 
   const handleChange = (slotId, val) => {
-    setPicks(prev => { const next = { ...prev }; if (val) next[slotId] = val; else delete next[slotId]; return next })
+    setPicks(prev => {
+      const next = { ...prev }
+      if (val) {
+        Object.entries(next).forEach(([existingSlotId, team]) => {
+          if (existingSlotId !== slotId && team === val) delete next[existingSlotId]
+        })
+        next[slotId] = val
+      } else {
+        delete next[slotId]
+      }
+      return next
+    })
     setSaved(false)
   }
 
   const handleSave = async () => {
     const filled = PREDICTION_SLOTS.filter(p => picks[p.id]).length
     const required = PREDICTION_SLOTS.length
-    if (filled > 0 && filled < required) {
-      alert(`Please complete all ${required} predictions before saving (${filled}/${required} filled). To reset, clear all picks.`)
+    const selectedTeams = PREDICTION_SLOTS.map(slot => picks[slot.id]).filter(Boolean)
+    if (filled !== required) {
+      alert(`Please complete all ${required} predictions before saving (${filled}/${required} filled).`)
+      return
+    }
+    if (new Set(selectedTeams).size !== selectedTeams.length) {
+      alert('Each team can only be selected once.')
       return
     }
     setSaving(true)
-    await fetch('/api/predictions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ picks }) })
-    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000)
+    try {
+      const response = await fetch('/api/predictions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ picks }) })
+      const result = await response.json()
+      if (!response.ok) {
+        alert(result.error || 'Failed to save predictions')
+        return
+      }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch {
+      alert('Failed to save predictions')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (!user) return (
@@ -239,25 +268,26 @@ function PredictPage({ onNavigate }) {
 
   const SlotRow = ({ slot }) => {
     const val = picks[slot.id] || ''
-    const usedElsewhere = new Set(Object.entries(picks).filter(([k]) => k !== slot.id).map(([, v]) => v))
     const leagueTeams = (LEAGUES[slot.league]?.teams || []).sort((a, b) => a.name.localeCompare(b.name))
     const pts = pickScore(slot.id, val, ranked)
     const pos = slotNumber(slot.id)
     return (
-      <div className="pred-row">
+      <div className={`pred-row${past ? '' : ' pred-row-no-score'}`}>
         <div className="pred-row-pos">
           {ordinal(pos)}
           {isRelegationSlot(slot) && <span>Relegation</span>}
         </div>
         <select className="pred-select" value={val} disabled={past} onChange={e => handleChange(slot.id, e.target.value)}>
           <option value="">— Select team —</option>
-          {leagueTeams.map(t => <option key={t.name} value={t.name} disabled={usedElsewhere.has(t.name) && t.name !== val}>{t.flag} {t.name}</option>)}
+          {leagueTeams.map(t => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
         </select>
-        <div className="pred-row-score">
-          {val
-            ? <span className="score-pill">{pts === null ? '—' : `${pts} pts`}</span>
-            : <span className="score-pill muted">—</span>}
-        </div>
+        {past && (
+          <div className="pred-row-score">
+            {val
+              ? <span className="score-pill">{pts === null ? '—' : `${pts} pts`}</span>
+              : <span className="score-pill muted">—</span>}
+          </div>
+        )}
       </div>
     )
   }
@@ -268,7 +298,7 @@ function PredictPage({ onNavigate }) {
         <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
         <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>
           One unique team per position. {filled}/{required} filled
-          {filled > 0 && <> · {total} pts total (PL {pl} + CH {ch})</>}
+          {past && filled > 0 && <> · {total} pts total (PL {pl} + CH {ch})</>}
         </p>
       </div>
       
@@ -279,7 +309,7 @@ function PredictPage({ onNavigate }) {
       <div className="pred-section">
         <div className="pred-section-title">
           <span> Premier League</span>
-          <span className="pred-section-pts">{pl} pts</span>
+          {past && <span className="pred-section-pts">{pl} pts</span>}
         </div>
         <div className="pred-list">{plSlots.map(s => <SlotRow key={s.id} slot={s} />)}</div>
       </div>
@@ -287,7 +317,7 @@ function PredictPage({ onNavigate }) {
       <div className="pred-section">
         <div className="pred-section-title">
           <span> Championship</span>
-          <span className="pred-section-pts">{ch} pts</span>
+          {past && <span className="pred-section-pts">{ch} pts</span>}
         </div>
         <div className="pred-list">{chSlots.map(s => <SlotRow key={s.id} slot={s} />)}</div>
       </div>

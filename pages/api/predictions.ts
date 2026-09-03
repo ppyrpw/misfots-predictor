@@ -36,6 +36,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (val && typeof val === 'string') sanitised[slot.id] = val
     }
 
+    const selectedTeams = Object.values(sanitised)
+    if (selectedTeams.length !== PREDICTION_SLOTS.length) {
+      return res.status(400).json({ error: `All ${PREDICTION_SLOTS.length} predictions are required` })
+    }
+    if (new Set(selectedTeams).size !== selectedTeams.length) {
+      return res.status(400).json({ error: 'Each team can only be selected once' })
+    }
+
     // Upsert (insert or update)
     const { error } = await supabaseAdmin
       .from('predictions')
