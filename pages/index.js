@@ -89,11 +89,6 @@ function StandingsPage() {
           {updatedAt && <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>Updated {new Date(updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}</span>}
         </div>
       </div>
-      <div className="info-row">
-        <div className="info-card"><div className="ic-label">Leagues</div><div className="ic-val">2</div><div className="ic-sub">Premier & Championship</div></div>
-        <div className="info-card"><div className="ic-label">Picks deadline</div><div className="ic-val" style={{ fontSize: 15 }}>{DEADLINE.toLocaleString('en-US', { month: 'short', day: 'numeric' })}</div><div className="ic-sub">1:00 PM Central</div></div>
-        <div className="info-card"><div className="ic-label">Updated every</div><div className="ic-val" style={{ fontSize: 15 }}>Daily at 9am</div><div className="ic-sub">Auto via cron</div></div>
-      </div>
 
       {loading ? (
         <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading standings…</p>
@@ -283,7 +278,7 @@ function PredictPage({ onNavigate }) {
 
       <div className="pred-section">
         <div className="pred-section-title">
-          <span>Premier League</span>
+          <span> Premier League</span>
           <span className="pred-section-pts">{pl} pts</span>
         </div>
         <div className="pred-list">{plSlots.map(s => <SlotRow key={s.id} slot={s} />)}</div>
@@ -291,7 +286,7 @@ function PredictPage({ onNavigate }) {
 
       <div className="pred-section">
         <div className="pred-section-title">
-          <span>Championship</span>
+          <span> Championship</span>
           <span className="pred-section-pts">{ch} pts</span>
         </div>
         <div className="pred-list">{chSlots.map(s => <SlotRow key={s.id} slot={s} />)}</div>
