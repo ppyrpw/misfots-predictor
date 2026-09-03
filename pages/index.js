@@ -12,7 +12,9 @@ function stageClass(stage) {
 }
 
 function StandingsPage() {
+  const { user } = useAuth()
   const [standings, setStandings] = useState([])
+  const [picks, setPicks] = useState({})
   const [updatedAt, setUpdatedAt] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -23,8 +25,18 @@ function StandingsPage() {
     }).finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    if (!user) {
+      setPicks({})
+      return
+    }
+    fetch('/api/predictions').then(r => r.json()).then(d => setPicks(d.picks || {}))
+  }, [user])
+
   const ranked = rankStandings(standings)
-  const leader = ranked[0]
+  const predictedByTeam = Object.fromEntries(
+    Object.entries(picks).map(([slotId, teamName]) => [teamName, slotNumber(slotId)])
+  )
 
   // Separate standings by league
   const plStandings = ranked.filter(t => t.league === 'PL')
@@ -38,12 +50,14 @@ function StandingsPage() {
           <th style={{ width: 40 }}>#</th><th>Club</th>
           <th style={{ textAlign: 'right' }}>W</th><th style={{ textAlign: 'right' }}>D</th><th style={{ textAlign: 'right' }}>L</th>
           <th style={{ textAlign: 'right' }}>GF</th><th style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th><th style={{ textAlign: 'right' }}>Pts</th>
+          <th style={{ textAlign: 'right', color: 'var(--amber)', background: 'var(--amber-bg)', borderLeft: '1px solid #fcd34d' }}>Predicted</th>
         </tr></thead>
         <tbody>
           {teams.map((t, i) => {
             const gd = (t.goals_for ?? 0) - (t.goals_against ?? 0)
+            const predictedPosition = predictedByTeam[t.team_name]
             return (
-              <tr key={`${t.league}-${t.team_name}`}>
+              <tr key={`${t.league}-${t.team_name}`} style={{ background: predictedPosition ? 'var(--amber-bg)' : undefined }}>
                 <td style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>{t.rank ?? i + 1}</td>
                 <td style={{ fontWeight: 500 }}>{t.team_name}</td>
                 <td className="num-cell">{t.wins ?? '—'}</td>
@@ -53,6 +67,9 @@ function StandingsPage() {
                 <td className="num-cell">{t.goals_against ?? '—'}</td>
                 <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>
                 <td className="num-cell" style={{ fontWeight: 500 }}>{(t.wins ?? 0) * 3 + (t.draws ?? 0)}</td>
+                <td className="num-cell" style={{ fontWeight: predictedPosition ? 600 : 400, color: predictedPosition ? 'var(--amber)' : 'var(--text-3)', background: 'var(--amber-bg)', borderLeft: '1px solid #fcd34d' }}>
+                  {predictedPosition ? ordinal(predictedPosition) : '—'}
+                </td>
               </tr>
             )
           })}
@@ -65,8 +82,7 @@ function StandingsPage() {
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 500 }}>League standings</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>All 44 clubs · Position → record → GD → goals scored</p>
+          <h2 style={{ fontSize: 18, fontWeight: 500 }}>EFL standings - PL & CH</h2>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--green)', background: 'var(--green-bg)', padding: '3px 8px', borderRadius: 4 }}>● LIVE</span>
@@ -87,7 +103,7 @@ function StandingsPage() {
           {chStandings.length > 0 && renderStandingsTable(chStandings, 'Championship')}
         </>
       )}
-      <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)' }}>Highlighted ranks = prediction positions</p>
+      <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)' }}>Your predicted teams are highlighted</p>
     </>
   )
 }
@@ -102,17 +118,26 @@ function LeaguePage({ onNavigate }) {
   }, [])
 
   const required = PREDICTION_SLOTS.length
+  const past = new Date() > DEADLINE
+  const deadlineDisplay = DEADLINE.toLocaleString('en-US', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/Chicago' })
 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 500 }}>Prediction league</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>Lowest total points deviation wins · Perfect pick = 0 pts</p>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>Total Score = PL + CH. Each league is Σ |predicted rank − actual rank|  </p>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>Lowest wins! · Perfect pick = 0 pts</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)', marginTop: 12 }}>
+        
+      </p>
         </div>
         {user ? <button className="btn-secondary" onClick={() => onNavigate('predict')}>Edit my picks →</button>
           : <button className="btn-secondary" onClick={() => onNavigate('auth')}>Join to predict →</button>}
       </div>
+      {past
+        ? <div className="banner banner-red">🔒 Predictions are locked. Deadline was {deadlineDisplay}.</div>
+        : <div className="banner banner-amber">⏰ Predictions lock on <strong>{deadlineDisplay}</strong>. You can update any time before then.</div>}
       {loading ? <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading…</p>
         : table.length === 0 ? (
           <div className="empty-state">
@@ -149,9 +174,6 @@ function LeaguePage({ onNavigate }) {
             </table>
           </div>
         )}
-      <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)', marginTop: 12 }}>
-        Score = PL + CH. Each league is Σ |predicted rank − actual rank|. Lower is better.
-      </p>
     </>
   )
 }
