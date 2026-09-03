@@ -89,6 +89,8 @@ input, select { font-family: var(--sans); }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr:hover td { background: #f5f4f1; }
 .num-cell { font-family: var(--mono); font-size: 12px; text-align: right; color: var(--text-2); }
+.table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.standings-table { min-width: 680px; }
 
 /* ── badges ── */
 .stage-badge { font-size: 11px; padding: 2px 8px; border-radius: 3px; font-family: var(--mono); white-space: nowrap; }
@@ -145,4 +147,7 @@ input, select { font-family: var(--sans); }
   .info-row { flex-direction: column; }
   .nav-btn { padding: 6px 10px; font-size: 12px; }
   .pred-row { grid-template-columns: 64px minmax(0, 1fr) 64px; padding: 8px 10px; }
+  .standings-table { min-width: 100%; }
+  .standings-table .mobile-optional { display: none; }
+  .standings-table th, .standings-table td { padding: 8px 6px; }
 }

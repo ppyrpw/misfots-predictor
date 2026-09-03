@@ -45,36 +45,38 @@ function StandingsPage() {
   const renderStandingsTable = (teams, leagueName) => (
     <div className="section-card" style={{ marginBottom: 24 }}>
       <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>{leagueName}</h3>
-      <table className="data-table">
-        <thead><tr>
-          <th style={{ width: 40 }}>#</th><th>Club</th>
-          <th style={{ textAlign: 'right' }}>W</th><th style={{ textAlign: 'right' }}>D</th><th style={{ textAlign: 'right' }}>L</th>
-          <th style={{ textAlign: 'right' }}>GF</th><th style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th><th style={{ textAlign: 'right' }}>Pts</th>
-          <th style={{ textAlign: 'right', color: 'var(--amber)', background: 'var(--amber-bg)', borderLeft: '1px solid #fcd34d' }}>Predicted</th>
-        </tr></thead>
-        <tbody>
-          {teams.map((t, i) => {
-            const gd = (t.goals_for ?? 0) - (t.goals_against ?? 0)
-            const predictedPosition = predictedByTeam[t.team_name]
-            return (
-              <tr key={`${t.league}-${t.team_name}`} style={{ background: predictedPosition ? 'var(--amber-bg)' : undefined }}>
-                <td style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>{t.rank ?? i + 1}</td>
-                <td style={{ fontWeight: 500 }}>{t.team_name}</td>
-                <td className="num-cell">{t.wins ?? '—'}</td>
-                <td className="num-cell">{t.draws ?? '—'}</td>
-                <td className="num-cell">{t.losses ?? '—'}</td>
-                <td className="num-cell">{t.goals_for ?? '—'}</td>
-                <td className="num-cell">{t.goals_against ?? '—'}</td>
-                <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>
-                <td className="num-cell" style={{ fontWeight: 500 }}>{(t.wins ?? 0) * 3 + (t.draws ?? 0)}</td>
-                <td className="num-cell" style={{ fontWeight: predictedPosition ? 600 : 400, color: predictedPosition ? 'var(--amber)' : 'var(--text-3)', background: 'var(--amber-bg)', borderLeft: '1px solid #fcd34d' }}>
-                  {predictedPosition ? ordinal(predictedPosition) : '—'}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+      <div className="table-scroll">
+        <table className="data-table standings-table">
+          <thead><tr>
+            <th style={{ width: 40 }}>#</th><th>Club</th>
+            <th className="mobile-optional" style={{ textAlign: 'right' }}>W</th><th className="mobile-optional" style={{ textAlign: 'right' }}>D</th><th className="mobile-optional" style={{ textAlign: 'right' }}>L</th>
+            <th className="mobile-optional" style={{ textAlign: 'right' }}>GF</th><th className="mobile-optional" style={{ textAlign: 'right' }}>GA</th><th style={{ textAlign: 'right' }}>GD</th><th style={{ textAlign: 'right' }}>Pts</th>
+            <th style={{ textAlign: 'right', color: 'var(--amber)', background: 'var(--amber-bg)', borderLeft: '1px solid #fcd34d' }}>Predicted</th>
+          </tr></thead>
+          <tbody>
+            {teams.map((t, i) => {
+              const gd = (t.goals_for ?? 0) - (t.goals_against ?? 0)
+              const predictedPosition = predictedByTeam[t.team_name]
+              return (
+                <tr key={`${t.league}-${t.team_name}`} style={{ background: predictedPosition ? 'var(--amber-bg)' : undefined }}>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>{t.rank ?? i + 1}</td>
+                  <td style={{ fontWeight: 500 }}>{t.team_name}</td>
+                  <td className="num-cell mobile-optional">{t.wins ?? '—'}</td>
+                  <td className="num-cell mobile-optional">{t.draws ?? '—'}</td>
+                  <td className="num-cell mobile-optional">{t.losses ?? '—'}</td>
+                  <td className="num-cell mobile-optional">{t.goals_for ?? '—'}</td>
+                  <td className="num-cell mobile-optional">{t.goals_against ?? '—'}</td>
+                  <td className="num-cell" style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</td>
+                  <td className="num-cell" style={{ fontWeight: 500 }}>{(t.wins ?? 0) * 3 + (t.draws ?? 0)}</td>
+                  <td className="num-cell" style={{ fontWeight: predictedPosition ? 600 : 400, color: predictedPosition ? 'var(--amber)' : 'var(--text-3)', background: 'var(--amber-bg)', borderLeft: '1px solid #fcd34d' }}>
+                    {predictedPosition ? ordinal(predictedPosition) : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 
@@ -145,7 +147,7 @@ function LeaguePage({ onNavigate }) {
           <div className="section-card">
             <table className="data-table">
               <thead><tr>
-                <th style={{ width: 36 }}>Pos</th><th>Participant</th><th>Email</th>
+                <th style={{ width: 36 }}>Pos</th><th>Participant</th>
                 <th style={{ textAlign: 'right' }}>Picks</th>
                 <th style={{ textAlign: 'right' }}>PL</th>
                 <th style={{ textAlign: 'right' }}>CH</th>
@@ -158,7 +160,6 @@ function LeaguePage({ onNavigate }) {
                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                     </td>
                     <td style={{ fontWeight: 500 }}>{row.name}{user?.email === row.email && <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 6 }}>(you)</span>}</td>
-                    <td style={{ color: 'var(--text-2)', fontSize: 13 }}>{row.email}</td>
                     <td className="num-cell">{row.filled}/{required}</td>
                     <td className="num-cell">{row.pl ?? 0}</td>
                     <td className="num-cell">{row.ch ?? 0}</td>
