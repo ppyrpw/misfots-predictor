@@ -72,10 +72,6 @@ function StandingsPage() {
           {updatedAt && <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>Updated {new Date(updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}</span>}
         </div>
       </div>
-      <div className="info-row">
-        <div className="info-card"><div className="ic-label">Picks deadline</div><div className="ic-val" style={{ fontSize: 15 }}>{DEADLINE.toLocaleString('en-US', { month: 'short', day: 'numeric' })}</div><div className="ic-sub">1:00 PM Central</div></div>
-      </div>
-
       {loading ? (
         <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading standings…</p>
       ) : (
@@ -99,13 +95,16 @@ function LeaguePage({ onNavigate }) {
   }, [])
 
   const required = PREDICTION_SLOTS.length
+  const past = new Date() > DEADLINE
+  const deadlineDisplay = DEADLINE.toLocaleString('en-US', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short', timeZone: 'America/Chicago' })
 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 500 }}>Prediction league</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>Lowest total points deviation wins · Perfect pick = 0 pts · Total Score = PL + CH. Each league is Σ predicted rank − actual rank|.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>Total Score = PL + CH. Each league is Σ |predicted rank − actual rank|  </p>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>Lowest wins! · Perfect pick = 0 pts</p>
           <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', fontFamily: 'var(--mono)', marginTop: 12 }}>
         
       </p>
@@ -113,6 +112,9 @@ function LeaguePage({ onNavigate }) {
         {user ? <button className="btn-secondary" onClick={() => onNavigate('predict')}>Edit my picks →</button>
           : <button className="btn-secondary" onClick={() => onNavigate('auth')}>Join to predict →</button>}
       </div>
+      {past
+        ? <div className="banner banner-red">🔒 Predictions are locked. Deadline was {deadlineDisplay}.</div>
+        : <div className="banner banner-amber">⏰ Predictions lock on <strong>{deadlineDisplay}</strong>. You can update any time before then.</div>}
       {loading ? <p style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)', fontSize: 13 }}>Loading…</p>
         : table.length === 0 ? (
           <div className="empty-state">
