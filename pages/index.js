@@ -205,20 +205,48 @@ function PredictPage({ onNavigate }) {
   }, [user])
 
   const handleChange = (slotId, val) => {
-    setPicks(prev => { const next = { ...prev }; if (val) next[slotId] = val; else delete next[slotId]; return next })
+    setPicks(prev => {
+      const next = { ...prev }
+      if (val) {
+        Object.entries(next).forEach(([existingSlotId, team]) => {
+          if (existingSlotId !== slotId && team === val) delete next[existingSlotId]
+        })
+        next[slotId] = val
+      } else {
+        delete next[slotId]
+      }
+      return next
+    })
     setSaved(false)
   }
 
   const handleSave = async () => {
     const filled = PREDICTION_SLOTS.filter(p => picks[p.id]).length
     const required = PREDICTION_SLOTS.length
-    if (filled > 0 && filled < required) {
-      alert(`Please complete all ${required} predictions before saving (${filled}/${required} filled). To reset, clear all picks.`)
+    const selectedTeams = PREDICTION_SLOTS.map(slot => picks[slot.id]).filter(Boolean)
+    if (filled !== required) {
+      alert(`Please complete all ${required} predictions before saving (${filled}/${required} filled).`)
+      return
+    }
+    if (new Set(selectedTeams).size !== selectedTeams.length) {
+      alert('Each team can only be selected once.')
       return
     }
     setSaving(true)
-    await fetch('/api/predictions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ picks }) })
-    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 3000)
+    try {
+      const response = await fetch('/api/predictions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ picks }) })
+      const result = await response.json()
+      if (!response.ok) {
+        alert(result.error || 'Failed to save predictions')
+        return
+      }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch {
+      alert('Failed to save predictions')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (!user) return (
@@ -240,7 +268,6 @@ function PredictPage({ onNavigate }) {
 
   const SlotRow = ({ slot }) => {
     const val = picks[slot.id] || ''
-    const usedElsewhere = new Set(Object.entries(picks).filter(([k]) => k !== slot.id).map(([, v]) => v))
     const leagueTeams = (LEAGUES[slot.league]?.teams || []).sort((a, b) => a.name.localeCompare(b.name))
     const pts = pickScore(slot.id, val, ranked)
     const pos = slotNumber(slot.id)
@@ -252,7 +279,7 @@ function PredictPage({ onNavigate }) {
         </div>
         <select className="pred-select" value={val} disabled={past} onChange={e => handleChange(slot.id, e.target.value)}>
           <option value="">— Select team —</option>
-          {leagueTeams.map(t => <option key={t.name} value={t.name} disabled={usedElsewhere.has(t.name) && t.name !== val}>{t.flag} {t.name}</option>)}
+          {leagueTeams.map(t => <option key={t.name} value={t.name}>{t.flag} {t.name}</option>)}
         </select>
         <div className="pred-row-score">
           {val
