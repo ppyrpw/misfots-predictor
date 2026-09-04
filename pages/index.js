@@ -339,7 +339,9 @@ function PredictPage({ onNavigate }) {
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
-          <button className="btn-secondary" onClick={handleRandomPicks} disabled={past || saving}>I feel lucky!</button>
+          {past
+            ? <div className="banner banner-red" style={{ marginBottom: 0 }}>🔒 Predictions are locked. Deadline was {deadlineDisplay}.</div>
+            : <div className="banner banner-amber" style={{ marginBottom: 0 }}>⏰ Predictions lock on <strong>{deadlineDisplay}</strong>. You can update any time before then.</div>}
         </div>
         <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>
           One unique team per position. {filled}/{required} filled
@@ -347,9 +349,7 @@ function PredictPage({ onNavigate }) {
         </p>
       </div>
       
-      {past
-        ? <div className="banner banner-red">🔒 Predictions are locked. Deadline was {deadlineDisplay}.</div>
-        : <div className="banner banner-amber">⏰ Predictions lock on <strong>{deadlineDisplay}</strong>. You can update any time before then.</div>}
+      <button className="btn-secondary" style={{ marginBottom: 20 }} onClick={handleRandomPicks} disabled={past || saving}>I feel lucky!</button>
 
       <div className="pred-section">
         <div className="pred-section-title">
