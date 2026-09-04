@@ -220,30 +220,72 @@ function PredictPage({ onNavigate }) {
     setSaved(false)
   }
 
-  const handleSave = async () => {
-    const filled = PREDICTION_SLOTS.filter(p => picks[p.id]).length
+  const savePredictions = async (nextPicks) => {
+    const filled = PREDICTION_SLOTS.filter(p => nextPicks[p.id]).length
     const required = PREDICTION_SLOTS.length
-    const selectedTeams = PREDICTION_SLOTS.map(slot => picks[slot.id]).filter(Boolean)
+    const selectedTeams = PREDICTION_SLOTS.map(slot => nextPicks[slot.id]).filter(Boolean)
     if (filled !== required) {
       alert(`Please complete all ${required} predictions before saving (${filled}/${required} filled).`)
-      return
+      return false
     }
     if (new Set(selectedTeams).size !== selectedTeams.length) {
       alert('Each team can only be selected once.')
-      return
+      return false
     }
-    setSaving(true)
+
     try {
-      const response = await fetch('/api/predictions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ picks }) })
+      const response = await fetch('/api/predictions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ picks: nextPicks }) })
       const result = await response.json()
       if (!response.ok) {
         alert(result.error || 'Failed to save predictions')
-        return
+        return false
       }
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      return true
     } catch {
       alert('Failed to save predictions')
+      return false
+    }
+  }
+
+  const showSavedConfirmation = () => {
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      if (await savePredictions(picks)) showSavedConfirmation()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleRandomPicks = async () => {
+    const confirmed = window.confirm(
+      'This will replace your predictions with a completely random set of picks. Click OK to continue or Cancel to keep your current picks.'
+    )
+    if (!confirmed) return
+
+    const randomPicks = {}
+    Object.keys(LEAGUES).forEach(leagueKey => {
+      const leagueSlots = PREDICTION_SLOTS.filter(slot => slot.league === leagueKey)
+      const shuffledTeams = [...LEAGUES[leagueKey].teams]
+      for (let i = shuffledTeams.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[shuffledTeams[i], shuffledTeams[j]] = [shuffledTeams[j], shuffledTeams[i]]
+      }
+      leagueSlots.forEach((slot, index) => {
+        randomPicks[slot.id] = shuffledTeams[index].name
+      })
+    })
+
+    setSaving(true)
+    try {
+      if (await savePredictions(randomPicks)) {
+        setPicks(randomPicks)
+        showSavedConfirmation()
+      }
     } finally {
       setSaving(false)
     }
@@ -295,7 +337,10 @@ function PredictPage({ onNavigate }) {
   return (
     <>
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 500 }}>My predictions</h2>
+          <button className="btn-secondary" onClick={handleRandomPicks} disabled={past || saving}>I feel lucky!</button>
+        </div>
         <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 6 }}>
           One unique team per position. {filled}/{required} filled
           {past && filled > 0 && <> · {total} pts total (PL {pl} + CH {ch})</>}
